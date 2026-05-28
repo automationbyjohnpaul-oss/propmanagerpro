@@ -1,0 +1,45 @@
+# dependencies
+node_modules/
+
+# environment variables (secrets!)
+.env
+.env.local
+.env.*.local
+
+# build outputs
+.next/
+dist/
+build/
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Prisma
+generated/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# testing
+coverage/
+
+# misc
+*.pem
