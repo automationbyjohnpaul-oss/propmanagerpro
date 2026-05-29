@@ -1,0 +1,179 @@
+// ============================================
+// PropManagerPro — Core Database Schema 
+// Revised: Pre-Migration Architecture Review
+// FIX: Removed invalid Unit.tenants relation
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS — Financial Safety & Data Integrity
+// ============================================
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum PaymentMethod {
+  cash
+  bank_transfer
+  card
+  check
+}
+
+// ============================================
+// 1. PROPERTY
+// ============================================
+// A building or complex managed by PropManager Pro.
+// Examples: "Sunset Apartments", "Oakwood Villas"
+
+model Property {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  city        String
+  state       String
+  zip         String
+  unitCount   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  units       Unit[]
+  leases      Lease[]
+
+  @@map("properties")
+}
+
+// ============================================
+// 2. UNIT
+// ============================================
+// A single rentable space inside a property.
+// Examples: "Apartment 3B", "Unit 101"
+// 
+// NOTE: isOccupied REMOVED — occupancy is
+// computed from active leases (single source of truth)
+// 
+// FIX: REMOVED `tenants Tenant[]` — invalid direct relation.
+// Access tenants via: Unit → Lease → Tenant
+
+model Unit {
+  id          String   @id @default(cuid())
+  unitNumber  String
+  bedrooms    Int
+  bathrooms   Float
+  squareFeet  Int?
+  rentAmount  Decimal                          // ✅ Decimal, not Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Foreign keys
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Relationships
+  leases      Lease[]  // ✅ Correct: Unit → Lease → Tenant
+
+  @@map("units")
+}
+
+// ============================================
+// 3. TENANT
+// ============================================
+// A person who rents a unit.
+// 
+// NOTE: unitId and unit relation REMOVED.
+// The Lease is the single source of truth for
+// which tenant is in which unit.
+
+model Tenant {
+  id                String   @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String   @unique
+  phone             String?
+  emergencyContact  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  leases            Lease[]
+  payments          Payment[]
+
+  @@map("tenants")
+}
+
+// ============================================
+// 4. LEASE
+// ============================================
+// A rental contract linking a tenant to a unit
+// within a property for a specific time period.
+// 
+// NOTE: isActive kept for MVP simplicity.
+// Long-term: compute from startDate/endDate.
+
+model Lease {
+  id              String    @id @default(cuid())
+  startDate       DateTime
+  endDate         DateTime
+  monthlyRent     Decimal                   // ✅ Decimal
+  securityDeposit Decimal                   // ✅ Decimal
+  isActive        Boolean   @default(true)
+  signedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Foreign keys
+  propertyId      String
+  property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitId          String
+  unit            Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relationships
+  payments        Payment[]
+
+  @@map("leases")
+}
+
+// ============================================
+// 5. PAYMENT
+// ============================================
+// Tracks every rent payment.
+// NEVER delete payments — void them instead
+// by changing status to "refunded" or "failed".
+// 
+// NOTE: Uses enums for status and method,
+// Decimal for amount.
+
+model Payment {
+  id          String        @id @default(cuid())
+  amount      Decimal                       // ✅ Decimal
+  paymentDate DateTime      @default(now())
+  method      PaymentMethod @default(bank_transfer)   // ✅ Enum
+  status      PaymentStatus @default(completed)       // ✅ Enum
+  reference   String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Foreign keys
+  leaseId     String
+  lease       Lease         @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
