@@ -6,6 +6,7 @@ import financeRoutes from "./routes/finance.routes";
 import propertyRoutes from "./routes/property.routes";
 import unitRoutes from "./routes/unit.routes";
 import tenantRoutes from "./routes/tenant.routes";
+import leaseRoutes from "./routes/lease.routes";
 
 const app = express();
 
@@ -17,5 +18,6 @@ app.use("/finance", financeRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/units", unitRoutes);
 app.use("/api/tenants", tenantRoutes);
+app.use("/api/leases", leaseRoutes);
 
 export default app;
