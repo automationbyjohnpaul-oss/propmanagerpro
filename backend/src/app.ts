@@ -4,6 +4,7 @@ import cors from "cors";
 import healthRoutes from "./routes/health.routes";
 import financeRoutes from "./routes/finance.routes";
 import propertyRoutes from "./routes/property.routes";
+import unitRoutes from "./routes/unit.routes";
 
 const app = express();
 
@@ -13,5 +14,6 @@ app.use(express.json());
 app.use("/health", healthRoutes);
 app.use("/finance", financeRoutes);
 app.use("/api/properties", propertyRoutes);
+app.use("/api/units", unitRoutes);
 
 export default app;

@@ -74,17 +74,16 @@ model Unit {
   bedrooms    Int
   bathrooms   Float
   squareFeet  Int?
-  rentAmount  Decimal                          // ✅ Decimal, not Float
+  rentAmount  Decimal
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Foreign keys
   propertyId  String
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  // Relationships
-  leases      Lease[]  // ✅ Correct: Unit → Lease → Tenant
+  leases      Lease[]
 
+  @@unique([propertyId, unitNumber])
   @@map("units")
 }
 
