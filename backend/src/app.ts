@@ -8,6 +8,7 @@ import unitRoutes from "./routes/unit.routes";
 import tenantRoutes from "./routes/tenant.routes";
 import leaseRoutes from "./routes/lease.routes";
 import paymentRoutes from "./routes/payment.routes";
+import financeAnalyticsRoutes from "./routes/financeAnalytics.routes";
 
 const app = express();
 
@@ -21,5 +22,6 @@ app.use("/api/units", unitRoutes);
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/leases", leaseRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/finance", financeAnalyticsRoutes);
 
 export default app;
