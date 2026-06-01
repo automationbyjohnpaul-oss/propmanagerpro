@@ -12,9 +12,15 @@ import {
 } from "../validators/unit.validator";
 import { prisma } from "../lib/prisma";
 
-export async function getUnits(req: Request, res: Response) {
+// Extend Express Request to include userId
+interface AuthRequest extends Request {
+  userId?: string;
+}
+
+export async function getUnits(req: AuthRequest, res: Response) {
   try {
-    const units = await getAllUnits();
+    const userId = req.userId!;
+    const units = await getAllUnits(userId);
     res.status(200).json(units);
   } catch (error) {
     console.error(error);
@@ -22,9 +28,10 @@ export async function getUnits(req: Request, res: Response) {
   }
 }
 
-export async function getUnit(req: Request, res: Response) {
+export async function getUnit(req: AuthRequest, res: Response) {
   try {
-    const unit = await getUnitById(req.params.id);
+    const userId = req.userId!;
+    const unit = await getUnitById(req.params.id as string, userId);
 
     if (!unit) {
       return res.status(404).json({ message: "Unit not found" });
@@ -37,7 +44,7 @@ export async function getUnit(req: Request, res: Response) {
   }
 }
 
-export async function createUnitHandler(req: Request, res: Response) {
+export async function createUnitHandler(req: AuthRequest, res: Response) {
   const validation = createUnitSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -53,6 +60,11 @@ export async function createUnitHandler(req: Request, res: Response) {
 
   if (!property) {
     return res.status(404).json({ message: "Property not found" });
+  }
+
+  // Optional: Verify the property belongs to the authenticated user
+  if (property.userId !== req.userId) {
+    return res.status(403).json({ message: "You don't own this property" });
   }
 
   try {
@@ -71,8 +83,9 @@ export async function createUnitHandler(req: Request, res: Response) {
   }
 }
 
-export async function updateUnitHandler(req: Request, res: Response) {
-  const existingUnit = await getUnitById(req.params.id);
+export async function updateUnitHandler(req: AuthRequest, res: Response) {
+  const userId = req.userId!;
+  const existingUnit = await getUnitById(req.params.id as string, userId);
 
   if (!existingUnit) {
     return res.status(404).json({ message: "Unit not found" });
@@ -95,8 +108,17 @@ export async function updateUnitHandler(req: Request, res: Response) {
     return res.status(404).json({ message: "Property not found" });
   }
 
+  // Optional: Verify the property belongs to the authenticated user
+  if (property.userId !== userId) {
+    return res.status(403).json({ message: "You don't own this property" });
+  }
+
   try {
-    const unit = await updateUnit(req.params.id, validation.data);
+    const unit = await updateUnit(
+      req.params.id as string,
+      userId,
+      validation.data,
+    );
     return res.status(200).json(unit);
   } catch (error: any) {
     console.error(error);
@@ -111,15 +133,16 @@ export async function updateUnitHandler(req: Request, res: Response) {
   }
 }
 
-export async function deleteUnitHandler(req: Request, res: Response) {
-  const existingUnit = await getUnitById(req.params.id);
+export async function deleteUnitHandler(req: AuthRequest, res: Response) {
+  const userId = req.userId!;
+  const existingUnit = await getUnitById(req.params.id as string, userId);
 
   if (!existingUnit) {
     return res.status(404).json({ message: "Unit not found" });
   }
 
   try {
-    await deleteUnit(req.params.id);
+    await deleteUnit(req.params.id as string, userId);
     return res.status(204).send();
   } catch (error: any) {
     console.error(error);

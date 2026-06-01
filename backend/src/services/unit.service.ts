@@ -1,15 +1,16 @@
 import { prisma } from "../lib/prisma";
 
-export async function getAllUnits() {
+export async function getAllUnits(userId: string) {
   return prisma.unit.findMany({
+    where: { property: { userId } },
     orderBy: { createdAt: "desc" },
     include: { property: true },
   });
 }
 
-export async function getUnitById(id: string) {
-  return prisma.unit.findUnique({
-    where: { id },
+export async function getUnitById(id: string, userId: string) {
+  return prisma.unit.findFirst({
+    where: { id, property: { userId } },
     include: { property: true },
   });
 }
@@ -27,6 +28,7 @@ export async function createUnit(data: {
 
 export async function updateUnit(
   id: string,
+  userId: string,
   data: {
     unitNumber: string;
     bedrooms: number;
@@ -36,14 +38,19 @@ export async function updateUnit(
     propertyId: string;
   },
 ) {
-  return prisma.unit.update({
-    where: { id },
-    data,
+  const unit = await prisma.unit.findFirst({
+    where: { id, property: { userId } },
   });
+  if (!unit) throw new Error("Unit not found");
+
+  return prisma.unit.update({ where: { id }, data });
 }
 
-export async function deleteUnit(id: string) {
-  return prisma.unit.delete({
-    where: { id },
+export async function deleteUnit(id: string, userId: string) {
+  const unit = await prisma.unit.findFirst({
+    where: { id, property: { userId } },
   });
+  if (!unit) throw new Error("Unit not found");
+
+  return prisma.unit.delete({ where: { id } });
 }

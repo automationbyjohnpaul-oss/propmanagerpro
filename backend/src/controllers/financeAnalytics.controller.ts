@@ -1,13 +1,14 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
   getDashboardMetrics,
   getRevenueByProperty,
   getOutstandingRent,
 } from "../services/financeAnalytics.service";
+import { AuthRequest } from "../middleware/auth.middleware";
 
-export async function getDashboard(req: Request, res: Response) {
+export async function getDashboard(req: AuthRequest, res: Response) {
   try {
-    const dashboard = await getDashboardMetrics();
+    const dashboard = await getDashboardMetrics(req.userId!);
     return res.status(200).json(dashboard);
   } catch (error) {
     console.error(error);
@@ -17,9 +18,9 @@ export async function getDashboard(req: Request, res: Response) {
   }
 }
 
-export async function getRevenue(req: Request, res: Response) {
+export async function getRevenue(req: AuthRequest, res: Response) {
   try {
-    const revenue = await getRevenueByProperty();
+    const revenue = await getRevenueByProperty(req.userId!);
     return res.status(200).json(revenue);
   } catch (error) {
     console.error(error);
@@ -27,9 +28,9 @@ export async function getRevenue(req: Request, res: Response) {
   }
 }
 
-export async function getOutstanding(req: Request, res: Response) {
+export async function getOutstanding(req: AuthRequest, res: Response) {
   try {
-    const outstanding = await getOutstandingRent();
+    const outstanding = await getOutstandingRent(req.userId!);
     return res.status(200).json(outstanding);
   } catch (error) {
     console.error(error);

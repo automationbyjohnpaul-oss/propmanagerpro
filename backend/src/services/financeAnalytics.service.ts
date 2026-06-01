@@ -7,16 +7,18 @@ function getCurrentMonthRange() {
   return { startOfMonth, startOfNextMonth };
 }
 
-export async function getDashboardMetrics() {
-  const totalUnits = await prisma.unit.count();
+export async function getDashboardMetrics(userId: string) {
+  const totalUnits = await prisma.unit.count({
+    where: { property: { userId } },
+  });
 
   const activeLeases = await prisma.lease.count({
-    where: { isActive: true },
+    where: { isActive: true, property: { userId } },
   });
 
   const occupiedUnits = await prisma.lease.groupBy({
     by: ["unitId"],
-    where: { isActive: true },
+    where: { isActive: true, property: { userId } },
   });
 
   const vacantUnits = totalUnits - occupiedUnits.length;
@@ -31,6 +33,9 @@ export async function getDashboardMetrics() {
       paymentDate: {
         gte: startOfMonth,
         lt: startOfNextMonth,
+      },
+      lease: {
+        property: { userId },
       },
     },
     _sum: { amount: true },
@@ -49,8 +54,9 @@ export async function getDashboardMetrics() {
   };
 }
 
-export async function getRevenueByProperty() {
+export async function getRevenueByProperty(userId: string) {
   const properties = await prisma.property.findMany({
+    where: { userId },
     include: {
       leases: {
         include: {
@@ -81,11 +87,11 @@ export async function getRevenueByProperty() {
   });
 }
 
-export async function getOutstandingRent() {
+export async function getOutstandingRent(userId: string) {
   const { startOfMonth, startOfNextMonth } = getCurrentMonthRange();
 
   const leases = await prisma.lease.findMany({
-    where: { isActive: true },
+    where: { isActive: true, property: { userId } },
     include: {
       tenant: true,
       unit: {

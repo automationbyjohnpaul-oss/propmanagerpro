@@ -1,8 +1,13 @@
 import { Prisma } from "../generated/prisma";
 import { prisma } from "../lib/prisma";
 
-export async function getAllPayments() {
+export async function getAllPayments(userId: string) {
   return prisma.payment.findMany({
+    where: {
+      lease: {
+        property: { userId },
+      },
+    },
     orderBy: { paymentDate: "desc" },
     include: {
       lease: true,
@@ -11,9 +16,14 @@ export async function getAllPayments() {
   });
 }
 
-export async function getPaymentById(id: string) {
-  return prisma.payment.findUnique({
-    where: { id },
+export async function getPaymentById(id: string, userId: string) {
+  return prisma.payment.findFirst({
+    where: {
+      id,
+      lease: {
+        property: { userId },
+      },
+    },
     include: {
       lease: true,
       tenant: true,
@@ -51,6 +61,7 @@ export async function createPayment(data: {
 
 export async function updatePayment(
   id: string,
+  userId: string,
   data: {
     amount?: number;
     paymentDate?: string;
@@ -62,6 +73,17 @@ export async function updatePayment(
     tenantId?: string;
   },
 ) {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      id,
+      lease: {
+        property: { userId },
+      },
+    },
+  });
+
+  if (!payment) throw new Error("Payment not found");
+
   return prisma.payment.update({
     where: { id },
     data: {
@@ -82,5 +104,24 @@ export async function updatePayment(
       lease: true,
       tenant: true,
     },
+  });
+}
+
+export async function deletePayment(id: string, userId: string) {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      id,
+      lease: {
+        property: { userId },
+      },
+    },
+  });
+
+  if (!payment) throw new Error("Payment not found");
+
+  // NOTE: Per schema philosophy — never delete payments, void them instead.
+  // But if you must delete, this is scoped to user's properties.
+  return prisma.payment.delete({
+    where: { id },
   });
 }
