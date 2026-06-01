@@ -8,6 +8,17 @@ export async function getAllProperties() {
   });
 }
 
+export async function getPropertyById(id: string) {
+  return prisma.property.findUnique({
+    where: { id },
+    include: {
+      units: {
+        orderBy: { unitNumber: "asc" },
+      },
+    },
+  });
+}
+
 export async function createProperty(data: {
   name: string;
   address: string;

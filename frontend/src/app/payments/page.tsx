@@ -2,32 +2,41 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getTenants, Tenant } from "@/services/tenantApi";
+import { getPayments, Payment } from "@/services/paymentApi";
 import PageHeader from "@/components/PageHeader";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
 import EmptyState from "@/components/EmptyState";
 
-export default function TenantsPage() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+const statusColors: Record<string, string> = {
+  completed: "bg-green-100 text-green-700",
+  pending: "bg-yellow-100 text-yellow-700",
+  failed: "bg-red-100 text-red-700",
+  refunded: "bg-gray-100 text-gray-600",
+};
+
+export default function PaymentsPage() {
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchTenants() {
+    async function fetchPayments() {
       try {
-        const data = await getTenants();
-        setTenants(data);
+        const data = await getPayments();
+        setPayments(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load tenants");
+        setError(
+          err instanceof Error ? err.message : "Failed to load payments",
+        );
       } finally {
         setLoading(false);
       }
     }
-    fetchTenants();
+    fetchPayments();
   }, []);
 
-  if (loading) return <LoadingState message="Loading tenants..." />;
+  if (loading) return <LoadingState message="Loading payments..." />;
   if (error) return <ErrorState message={error} />;
 
   return (
@@ -35,23 +44,23 @@ export default function TenantsPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-start mb-8">
           <PageHeader
-            title="Tenants"
+            title="Payments"
             description={
-              tenants.length > 0
-                ? `${tenants.length} tenants`
-                : "Manage your tenants"
+              payments.length > 0
+                ? `${payments.length} payments`
+                : "Track rent payments"
             }
           />
           <Link
-            href="/tenants/new"
+            href="/payments/new"
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex-shrink-0"
           >
-            Add Tenant
+            Record Payment
           </Link>
         </div>
 
-        {tenants.length === 0 ? (
-          <EmptyState message="No tenants found. Add your first tenant to get started." />
+        {payments.length === 0 ? (
+          <EmptyState message="No payments recorded yet." />
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
@@ -59,13 +68,19 @@ export default function TenantsPage() {
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="text-left px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
-                      Name
+                      Date
                     </th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
-                      Email
+                      Tenant
                     </th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
-                      Phone
+                      Amount
+                    </th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
+                      Method
+                    </th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
+                      Status
                     </th>
                     <th className="text-right px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
                       Actions
@@ -73,23 +88,35 @@ export default function TenantsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tenants.map((tenant) => (
+                  {payments.map((payment) => (
                     <tr
-                      key={tenant.id}
+                      key={payment.id}
                       className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {tenant.firstName} {tenant.lastName}
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {new Date(payment.paymentDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {tenant.email}
+                        {payment.tenant
+                          ? `${payment.tenant.firstName} ${payment.tenant.lastName}`
+                          : "—"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {tenant.phone || "—"}
+                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                        ${Number(payment.amount).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+                        {payment.method.replace("_", " ")}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[payment.status] || "bg-gray-100 text-gray-600"}`}
+                        >
+                          {payment.status}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-right">
                         <Link
-                          href={`/tenants/${tenant.id}/edit`}
+                          href={`/payments/${payment.id}/edit`}
                           className="text-blue-600 hover:text-blue-800 font-medium"
                         >
                           Edit

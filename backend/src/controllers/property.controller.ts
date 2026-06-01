@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
   getAllProperties,
+  getPropertyById,
   createProperty,
   updateProperty,
   deleteProperty,
@@ -21,6 +22,21 @@ export async function getProperties(req: Request, res: Response) {
     res.status(500).json({
       message: "Failed to fetch properties",
     });
+  }
+}
+
+export async function getProperty(req: Request, res: Response) {
+  try {
+    const property = await getPropertyById(req.params.id);
+
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    return res.status(200).json(property);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to fetch property" });
   }
 }
 
