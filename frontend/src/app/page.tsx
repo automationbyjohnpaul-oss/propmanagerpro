@@ -7,6 +7,7 @@ import DashboardGrid from "@/components/DashboardGrid";
 import DashboardCard from "@/components/DashboardCard";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -76,24 +77,26 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <PageHeader
-          title="PropManager Pro"
-          description="Real-time property management dashboard"
-        />
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <PageHeader
+            title="PropManager Pro"
+            description="Real-time property management dashboard"
+          />
 
-        <DashboardGrid>
-          {kpis.map((kpi) => (
-            <DashboardCard
-              key={kpi.label}
-              label={kpi.label}
-              value={kpi.value}
-              color={kpi.color}
-            />
-          ))}
-        </DashboardGrid>
+          <DashboardGrid>
+            {kpis.map((kpi) => (
+              <DashboardCard
+                key={kpi.label}
+                label={kpi.label}
+                value={kpi.value}
+                color={kpi.color}
+              />
+            ))}
+          </DashboardGrid>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }

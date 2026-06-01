@@ -1,5 +1,5 @@
 import "./globals.css";
-import BottomNav from "@/components/layout/BottomNav";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata = {
   title: "PropManager Pro",
@@ -14,9 +14,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-gray-50 text-gray-900">
-        <div className="min-h-screen pb-16">{children}</div>
-
-        <BottomNav />
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
