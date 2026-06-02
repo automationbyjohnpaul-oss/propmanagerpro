@@ -12,6 +12,7 @@ import PageHeader from "@/components/PageHeader";
 import PaymentForm from "@/components/forms/PaymentForm";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function EditPaymentPage() {
   const params = useParams();
@@ -56,27 +57,32 @@ export default function EditPaymentPage() {
     return <ErrorState message={error || "Payment not found"} />;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-2xl mx-auto">
-        <PageHeader title="Edit Payment" description="Update payment details" />
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <PaymentForm
-            initialData={{
-              amount: Number(payment.amount),
-              paymentDate: payment.paymentDate,
-              method: payment.method,
-              status: payment.status,
-              reference: payment.reference || "",
-              notes: payment.notes || "",
-              leaseId: payment.leaseId,
-              tenantId: payment.tenantId,
-            }}
-            onSubmit={handleSubmit}
-            submitLabel="Update Payment"
-            onCancel={() => router.back()}
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-2xl mx-auto">
+          <PageHeader
+            title="Edit Payment"
+            description="Update payment details"
           />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <PaymentForm
+              initialData={{
+                amount: Number(payment.amount),
+                paymentDate: payment.paymentDate,
+                method: payment.method,
+                status: payment.status,
+                reference: payment.reference || "",
+                notes: payment.notes || "",
+                leaseId: payment.leaseId,
+                tenantId: payment.tenantId,
+              }}
+              onSubmit={handleSubmit}
+              submitLabel="Update Payment"
+              onCancel={() => router.back()}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }

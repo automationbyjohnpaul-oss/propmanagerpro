@@ -7,15 +7,16 @@ import PageHeader from "@/components/PageHeader";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
 import EmptyState from "@/components/EmptyState";
+import AuthGuard from "@/components/AuthGuard";
 
-const statusColors: Record<string, string> = {
+const statusColors: Record<Payment["status"], string> = {
   completed: "bg-green-100 text-green-700",
   pending: "bg-yellow-100 text-yellow-700",
   failed: "bg-red-100 text-red-700",
   refunded: "bg-gray-100 text-gray-600",
 };
 
-export default function PaymentsPage() {
+function PaymentsContent() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +95,9 @@ export default function PaymentsPage() {
                       className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(payment.paymentDate).toLocaleDateString()}
+                        {new Date(payment.paymentDate).toLocaleDateString(
+                          "en-US",
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {payment.tenant
@@ -102,7 +105,10 @@ export default function PaymentsPage() {
                           : "—"}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                        ${Number(payment.amount).toLocaleString()}
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                        }).format(Number(payment.amount))}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 capitalize">
                         {payment.method.replace("_", " ")}
@@ -131,5 +137,13 @@ export default function PaymentsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <AuthGuard>
+      <PaymentsContent />
+    </AuthGuard>
   );
 }

@@ -1,4 +1,4 @@
-import { getToken } from "@/lib/auth";
+import { getToken, removeToken } from "@/lib/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -19,6 +19,14 @@ async function request<T>(
   };
 
   const response = await fetch(url, config);
+
+  if (response.status === 401) {
+    removeToken();
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new Error("Session expired. Please login again.");
+  }
 
   if (response.status === 204) {
     return undefined as T;

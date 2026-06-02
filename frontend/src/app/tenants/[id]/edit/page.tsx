@@ -12,6 +12,7 @@ import PageHeader from "@/components/PageHeader";
 import TenantForm from "@/components/forms/TenantForm";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function EditTenantPage() {
   const params = useParams();
@@ -51,27 +52,29 @@ export default function EditTenantPage() {
     return <ErrorState message={error || "Tenant not found"} />;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-2xl mx-auto">
-        <PageHeader
-          title="Edit Tenant"
-          description={`Update ${tenant.firstName} ${tenant.lastName}`}
-        />
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <TenantForm
-            initialData={{
-              firstName: tenant.firstName,
-              lastName: tenant.lastName,
-              email: tenant.email,
-              phone: tenant.phone || "",
-              emergencyContact: tenant.emergencyContact || "",
-            }}
-            onSubmit={handleSubmit}
-            submitLabel="Update Tenant"
-            onCancel={() => router.back()}
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-2xl mx-auto">
+          <PageHeader
+            title="Edit Tenant"
+            description={`Update ${tenant.firstName} ${tenant.lastName}`}
           />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <TenantForm
+              initialData={{
+                firstName: tenant.firstName,
+                lastName: tenant.lastName,
+                email: tenant.email,
+                phone: tenant.phone || "",
+                emergencyContact: tenant.emergencyContact || "",
+              }}
+              onSubmit={handleSubmit}
+              submitLabel="Update Tenant"
+              onCancel={() => router.back()}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }

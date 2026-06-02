@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import UnitForm from "@/components/forms/UnitForm";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function EditUnitPage() {
   const params = useParams();
@@ -54,28 +55,30 @@ export default function EditUnitPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-2xl mx-auto">
-        <PageHeader
-          title="Edit Unit"
-          description={`Update Unit ${unit.unitNumber}`}
-        />
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <UnitForm
-            initialData={{
-              unitNumber: unit.unitNumber,
-              bedrooms: unit.bedrooms,
-              bathrooms: unit.bathrooms,
-              squareFeet: unit.squareFeet,
-              rentAmount: Number(unit.rentAmount),
-            }}
-            onSubmit={handleSubmit}
-            submitLabel="Update Unit"
-            onCancel={() => router.back()}
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-2xl mx-auto">
+          <PageHeader
+            title="Edit Unit"
+            description={`Update Unit ${unit.unitNumber}`}
           />
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <UnitForm
+              initialData={{
+                unitNumber: unit.unitNumber,
+                bedrooms: unit.bedrooms,
+                bathrooms: unit.bathrooms,
+                squareFeet: unit.squareFeet,
+                rentAmount: Number(unit.rentAmount),
+              }}
+              onSubmit={handleSubmit}
+              submitLabel="Update Unit"
+              onCancel={() => router.back()}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }
