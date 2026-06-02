@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { Prisma } from "../generated/prisma";
+import { Prisma } from "@prisma/client";
 import {
   getAllPayments,
   getPaymentById,

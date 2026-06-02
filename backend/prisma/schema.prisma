@@ -4,11 +4,11 @@
 // FIX: Removed invalid Unit.tenants relation
 // FIX: Added User model for authentication
 // UPDATED: Property.userId and Property.user now required
+// REFACTOR: Standard Prisma client generation
 // ============================================
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {

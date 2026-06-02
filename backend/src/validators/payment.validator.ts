@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PaymentMethod, PaymentStatus } from "../generated/prisma";
+import { PaymentMethod, PaymentStatus } from "@prisma/client";
 
 export const createPaymentSchema = z.object({
   amount: z.number().positive().max(999999),
