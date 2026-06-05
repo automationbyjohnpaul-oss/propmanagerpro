@@ -5,6 +5,7 @@
 // FIX: Added User model for authentication
 // UPDATED: Property.userId and Property.user now required
 // REFACTOR: Standard Prisma client generation
+// REFACTOR: Direct tenant ownership (v0.6.1)
 // ============================================
 
 generator client {
@@ -56,6 +57,7 @@ model User {
 
   // Relationships
   properties Property[]
+  tenants   Tenant[]
 
   @@map("users")
 }
@@ -96,9 +98,6 @@ model Property {
 // 
 // NOTE: isOccupied REMOVED — occupancy is
 // computed from active leases (single source of truth)
-// 
-// FIX: REMOVED `tenants Tenant[]` — invalid direct relation.
-// Access tenants via: Unit → Lease → Tenant
 
 model Unit {
   id          String   @id @default(cuid())
@@ -123,10 +122,7 @@ model Unit {
 // 4. TENANT
 // ============================================
 // A person who rents a unit.
-// 
-// NOTE: unitId and unit relation REMOVED.
-// The Lease is the single source of truth for
-// which tenant is in which unit.
+// Ownership: Direct userId (v0.6.1)
 
 model Tenant {
   id                String   @id @default(cuid())
@@ -135,6 +131,8 @@ model Tenant {
   email             String   @unique
   phone             String?
   emergencyContact  String?
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -150,9 +148,6 @@ model Tenant {
 // ============================================
 // A rental contract linking a tenant to a unit
 // within a property for a specific time period.
-// 
-// NOTE: isActive kept for MVP simplicity.
-// Long-term: compute from startDate/endDate.
 
 model Lease {
   id              String    @id @default(cuid())
@@ -183,11 +178,7 @@ model Lease {
 // 6. PAYMENT
 // ============================================
 // Tracks every rent payment.
-// NEVER delete payments — void them instead
-// by changing status to "refunded" or "failed".
-// 
-// NOTE: Uses enums for status and method,
-// Decimal for amount.
+// NEVER delete payments — void them instead.
 
 model Payment {
   id          String        @id @default(cuid())

@@ -2,13 +2,7 @@ import { prisma } from "../lib/prisma";
 
 export async function getAllTenants(userId: string) {
   return prisma.tenant.findMany({
-    where: {
-      leases: {
-        some: {
-          property: { userId },
-        },
-      },
-    },
+    where: { userId },
     orderBy: { createdAt: "desc" },
     include: {
       leases: {
@@ -23,14 +17,7 @@ export async function getAllTenants(userId: string) {
 
 export async function getTenantById(id: string, userId: string) {
   return prisma.tenant.findFirst({
-    where: {
-      id,
-      leases: {
-        some: {
-          property: { userId },
-        },
-      },
-    },
+    where: { id, userId },
     include: {
       leases: {
         include: {
@@ -43,14 +30,22 @@ export async function getTenantById(id: string, userId: string) {
   });
 }
 
-export async function createTenant(data: {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  emergencyContact?: string;
-}) {
-  return prisma.tenant.create({ data });
+export async function createTenant(
+  data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    emergencyContact?: string;
+  },
+  userId: string,
+) {
+  return prisma.tenant.create({
+    data: {
+      ...data,
+      userId,
+    },
+  });
 }
 
 export async function updateTenant(
@@ -65,14 +60,7 @@ export async function updateTenant(
   },
 ) {
   const tenant = await prisma.tenant.findFirst({
-    where: {
-      id,
-      leases: {
-        some: {
-          property: { userId },
-        },
-      },
-    },
+    where: { id, userId },
   });
 
   if (!tenant) throw new Error("Tenant not found");
@@ -85,14 +73,7 @@ export async function updateTenant(
 
 export async function deleteTenant(id: string, userId: string) {
   const tenant = await prisma.tenant.findFirst({
-    where: {
-      id,
-      leases: {
-        some: {
-          property: { userId },
-        },
-      },
-    },
+    where: { id, userId },
   });
 
   if (!tenant) throw new Error("Tenant not found");

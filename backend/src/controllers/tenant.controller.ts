@@ -48,7 +48,7 @@ export async function createTenantHandler(req: AuthRequest, res: Response) {
   }
 
   try {
-    const tenant = await createTenant(validation.data);
+    const tenant = await createTenant(validation.data, req.userId!);
     return res.status(201).json(tenant);
   } catch (error: any) {
     console.error(error);
