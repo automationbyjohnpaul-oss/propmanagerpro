@@ -14,7 +14,12 @@ import { authMiddleware } from "./middleware/auth.middleware";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:3000", process.env.FRONTEND_URL].filter(Boolean),
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 // Public routes
