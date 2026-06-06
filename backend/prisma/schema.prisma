@@ -123,12 +123,13 @@ model Unit {
 // ============================================
 // A person who rents a unit.
 // Ownership: Direct userId (v0.6.1)
+// Email uniqueness: Per landlord (composite with userId)
 
 model Tenant {
   id                String   @id @default(cuid())
   firstName         String
   lastName          String
-  email             String   @unique
+  email             String
   phone             String?
   emergencyContact  String?
   userId            String
@@ -140,6 +141,7 @@ model Tenant {
   leases            Lease[]
   payments          Payment[]
 
+  @@unique([userId, email])
   @@map("tenants")
 }
 
