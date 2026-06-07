@@ -1,4 +1,5 @@
 import { getToken, removeToken } from "@/lib/auth";
+import { getCached, setCache, invalidateCacheByPrefix } from "@/lib/cache";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -8,6 +9,13 @@ async function request<T>(
 ): Promise<T> {
   const token = getToken();
   const url = `${API_BASE_URL}${endpoint}`;
+  const method = options.method || "GET";
+
+  // Return cached data for GET requests
+  if (method === "GET") {
+    const cached = getCached<T>(url);
+    if (cached) return cached;
+  }
 
   const config: RequestInit = {
     headers: {
@@ -16,6 +24,7 @@ async function request<T>(
       ...options.headers,
     },
     ...options,
+    method,
   };
 
   const response = await fetch(url, config);
@@ -45,6 +54,20 @@ async function request<T>(
         ? (data as { message: string }).message
         : undefined) ?? `Request failed with status ${response.status}`;
     throw new Error(message);
+  }
+
+  // Cache successful GET responses
+  if (method === "GET") {
+    setCache(url, data);
+  }
+
+  // Invalidate related caches on mutations
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    invalidateCacheByPrefix("/api/properties");
+    invalidateCacheByPrefix("/api/tenants");
+    invalidateCacheByPrefix("/api/leases");
+    invalidateCacheByPrefix("/api/payments");
+    invalidateCacheByPrefix("/api/finance");
   }
 
   return data as T;
