@@ -15,7 +15,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
-  if (loading) {
+  // Only show loading on initial auth check, not on every navigation
+  if (loading && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500">Loading...</p>
