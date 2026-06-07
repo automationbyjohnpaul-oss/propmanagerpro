@@ -34,7 +34,7 @@
 ### Tenant
 
 - Tenant belongs to exactly one user (v0.6.1)
-- Email uniqueness: currently global — planned composite `@@unique([userId, email])`
+- Email uniqueness: composite @@unique([userId, email]) ✅ v0.6.2
 
 ### Lease
 
@@ -62,17 +62,17 @@
 
 - Unit: unique on (propertyId, unitNumber)
 - Lease: overlap prevention (application-level)
-- Tenant email: `@unique` (global — revisit v0.6.2 for composite)
+- Tenant email: @@unique([userId, email]) ✅ v0.6.2
 
 ## Known Gaps (v0.6.2 Hardening)
 
-- [ ] Tenant email: change to `@@unique([userId, email])`
-- [ ] No rate limiting
-- [ ] No error boundaries on frontend
-- [ ] Error messages may leak internals
+- [x] Tenant email: changed to @@unique([userId, email]) ✅ v0.6.2
+- [x] Rate limiting added (express-rate-limit, 100 req/15min) ? v0.6.2
+- [x] Error boundary added to root layout ? v0.6.2
+- [x] Error messages audited � clean, no leaks ? v0.6.2
 - [ ] Prisma migration history needs normalization
 - [ ] No automated backups
-- [ ] No monitoring/alerting (UptimeRobot)
+- [x] Monitoring added (UptimeRobot, 5-min interval) ? v0.6.2
 - [ ] No frontend loading/empty/error state audit
 
 ## AI-Friendly Conventions

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getDashboardMetrics, DashboardMetrics } from "@/services/financeApi";
 import PageHeader from "@/components/PageHeader";
@@ -8,16 +9,17 @@ import DashboardGrid from "@/components/DashboardGrid";
 import DashboardCard from "@/components/DashboardCard";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
-import AuthGuard from "@/components/AuthGuard";
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchMetrics() {
+      setLoading(true);
       try {
         const data = await getDashboardMetrics();
         setMetrics(data);
@@ -31,7 +33,7 @@ export default function DashboardPage() {
     }
 
     fetchMetrics();
-  }, []);
+  }, [pathname]);
 
   if (loading) {
     return <LoadingState message="Loading dashboard..." />;
@@ -79,43 +81,41 @@ export default function DashboardPage() {
   ];
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 className="text-xl font-bold text-gray-900">PropManager Pro</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">{user?.name}</span>
-              <button
-                onClick={logout}
-                className="text-sm text-gray-500 hover:text-red-600 font-medium cursor-pointer transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="p-6">
-          <div className="max-w-6xl mx-auto">
-            <PageHeader
-              title="Dashboard"
-              description="Real-time property management dashboard"
-            />
-
-            <DashboardGrid>
-              {kpis.map((kpi) => (
-                <DashboardCard
-                  key={kpi.label}
-                  label={kpi.label}
-                  value={kpi.value}
-                  color={kpi.color}
-                />
-              ))}
-            </DashboardGrid>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <h1 className="text-xl font-bold text-gray-900">PropManager Pro</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">{user?.name}</span>
+            <button
+              onClick={logout}
+              className="text-sm text-gray-500 hover:text-red-600 font-medium cursor-pointer transition-colors"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
+      </header>
+
+      <div className="p-6">
+        <div className="max-w-6xl mx-auto">
+          <PageHeader
+            title="Dashboard"
+            description="Real-time property management dashboard"
+          />
+
+          <DashboardGrid>
+            {kpis.map((kpi) => (
+              <DashboardCard
+                key={kpi.label}
+                label={kpi.label}
+                value={kpi.value}
+                color={kpi.color}
+              />
+            ))}
+          </DashboardGrid>
+        </div>
       </div>
-    </AuthGuard>
+    </div>
   );
 }
