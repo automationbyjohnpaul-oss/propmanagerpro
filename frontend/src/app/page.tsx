@@ -88,7 +88,7 @@ export default function DashboardPage() {
               <span className="text-sm text-gray-600">{user?.name}</span>
               <button
                 onClick={logout}
-                className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+                className="text-sm text-gray-500 hover:text-red-600 font-medium cursor-pointer transition-colors"
               >
                 Sign Out
               </button>
