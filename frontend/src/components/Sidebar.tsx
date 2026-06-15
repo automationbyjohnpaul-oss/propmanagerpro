@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const links = [
   { href: "/", label: "Dashboard" },
@@ -14,6 +16,16 @@ const links = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Preload all routes for instant navigation
+  useEffect(() => {
+    router.prefetch("/properties");
+    router.prefetch("/tenants");
+    router.prefetch("/leases");
+    router.prefetch("/payments");
+    router.prefetch("/finance");
+  }, [router]);
 
   return (
     <aside className="w-56 bg-white border-r border-gray-200 min-h-screen p-4 flex flex-col">
@@ -28,6 +40,7 @@ export default function Sidebar() {
             <Link
               key={link.href}
               href={link.href}
+              prefetch
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 isActive
                   ? "bg-blue-50 text-blue-700"

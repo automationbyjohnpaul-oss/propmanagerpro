@@ -8,46 +8,52 @@ function getCurrentMonthRange() {
 }
 
 export async function getDashboardMetrics(userId: string) {
-  const totalUnits = await prisma.unit.count({
-    where: { property: { userId } },
-  });
-
-  const activeLeases = await prisma.lease.count({
-    where: { isActive: true, property: { userId } },
-  });
-
-  const occupiedUnits = await prisma.lease.groupBy({
-    by: ["unitId"],
-    where: { isActive: true, property: { userId } },
-  });
-
-  const vacantUnits = totalUnits - occupiedUnits.length;
-  const occupancyRate =
-    totalUnits > 0 ? (occupiedUnits.length / totalUnits) * 100 : 0;
-
   const { startOfMonth, startOfNextMonth } = getCurrentMonthRange();
 
-  const monthlyPayments = await prisma.payment.aggregate({
-    where: {
-      status: "completed",
-      paymentDate: {
-        gte: startOfMonth,
-        lt: startOfNextMonth,
-      },
-      lease: {
-        property: { userId },
-      },
-    },
-    _sum: { amount: true },
-  });
+  const [totalUnits, activeLeases, occupiedUnitsGroup, monthlyPayments] =
+    await Promise.all([
+      prisma.unit.count({
+        where: { property: { userId } },
+      }),
+      prisma.lease.count({
+        where: {
+          isActive: true,
+          property: { userId },
+        },
+      }),
+      prisma.lease.groupBy({
+        by: ["unitId"],
+        where: {
+          isActive: true,
+          property: { userId },
+        },
+      }),
+      prisma.payment.aggregate({
+        where: {
+          status: "completed",
+          paymentDate: {
+            gte: startOfMonth,
+            lt: startOfNextMonth,
+          },
+          lease: {
+            property: { userId },
+          },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
 
+  const occupiedUnitsCount = occupiedUnitsGroup.length;
+  const vacantUnits = totalUnits - occupiedUnitsCount;
+  const occupancyRate =
+    totalUnits > 0 ? (occupiedUnitsCount / totalUnits) * 100 : 0;
   const monthlyIncome = Number(monthlyPayments._sum.amount ?? 0);
 
   return {
     monthlyIncome,
     monthlyExpenses: 0,
     netCashflow: monthlyIncome,
-    occupiedUnits: occupiedUnits.length,
+    occupiedUnits: occupiedUnitsCount,
     vacantUnits,
     occupancyRate: Math.round(occupancyRate * 100) / 100,
     activeLeases,

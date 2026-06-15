@@ -12,7 +12,6 @@ import PageHeader from "@/components/PageHeader";
 import PropertyForm from "@/components/forms/PropertyForm";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
-import AuthGuard from "@/components/AuthGuard";
 
 export default function EditPropertyPage() {
   const params = useParams();
@@ -61,30 +60,28 @@ export default function EditPropertyPage() {
   }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <PageHeader
-            title="Edit Property"
-            description="Update property information"
-          />
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-2xl mx-auto">
+        <PageHeader
+          title="Edit Property"
+          description="Update property information"
+        />
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <PropertyForm
-              initialData={{
-                name: property.name,
-                address: property.address,
-                city: property.city,
-                state: property.state,
-                zip: property.zip,
-                unitCount: property.unitCount,
-              }}
-              onSubmit={handleSubmit}
-              submitLabel="Update Property"
-            />
-          </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <PropertyForm
+            initialData={{
+              name: property.name,
+              address: property.address,
+              city: property.city,
+              state: property.state,
+              zip: property.zip,
+              unitCount: property.unitCount,
+            }}
+            onSubmit={handleSubmit}
+            submitLabel="Update Property"
+          />
         </div>
       </div>
-    </AuthGuard>
+    </div>
   );
 }

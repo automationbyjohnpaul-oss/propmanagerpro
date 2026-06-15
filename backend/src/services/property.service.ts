@@ -2,14 +2,21 @@ import { prisma } from "../lib/prisma";
 
 export async function getAllProperties(userId: string) {
   return prisma.property.findMany({
-    where: { userId },
+    where: {
+      userId,
+      deletedAt: null, // 👈 Add this
+    },
     orderBy: { createdAt: "desc" },
   });
 }
 
 export async function getPropertyById(id: string, userId: string) {
   return prisma.property.findFirst({
-    where: { id, userId },
+    where: {
+      id,
+      userId,
+      deletedAt: null, // 👈 Add this
+    },
     include: {
       units: { orderBy: { unitNumber: "asc" } },
     },
@@ -25,7 +32,35 @@ export async function createProperty(data: {
   unitCount: number;
   userId: string;
 }) {
-  return prisma.property.create({ data });
+  return await prisma.$transaction(async (tx) => {
+    // 1. Create property
+    const property = await tx.property.create({
+      data: {
+        name: data.name,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        zip: data.zip,
+        unitCount: data.unitCount,
+        userId: data.userId,
+      },
+    });
+
+    // 2. AUTO-CREATE UNITS
+    if (data.unitCount > 0) {
+      await tx.unit.createMany({
+        data: Array.from({ length: data.unitCount }, (_, i) => ({
+          unitNumber: String(i + 1),
+          propertyId: property.id,
+          bedrooms: 1,
+          bathrooms: 1,
+          rentAmount: 0,
+        })),
+      });
+    }
+
+    return property;
+  });
 }
 
 export async function updateProperty(

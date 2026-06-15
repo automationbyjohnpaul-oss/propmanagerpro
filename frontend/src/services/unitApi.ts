@@ -22,8 +22,9 @@ export interface CreateUnitInput {
   propertyId: string;
 }
 
-export async function getUnits(): Promise<Unit[]> {
-  return api.get("/api/units");
+// ✅ UPDATED: propertyId is now REQUIRED - no fallback
+export async function getUnits(propertyId: string): Promise<Unit[]> {
+  return api.get(`/api/units?propertyId=${propertyId}`);
 }
 
 export async function getUnit(id: string): Promise<Unit> {

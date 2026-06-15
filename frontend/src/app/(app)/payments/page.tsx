@@ -7,7 +7,6 @@ import PageHeader from "@/components/PageHeader";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
 import EmptyState from "@/components/EmptyState";
-import AuthGuard from "@/components/AuthGuard";
 
 const statusColors: Record<Payment["status"], string> = {
   completed: "bg-green-100 text-green-700",
@@ -16,7 +15,7 @@ const statusColors: Record<Payment["status"], string> = {
   refunded: "bg-gray-100 text-gray-600",
 };
 
-function PaymentsContent() {
+export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -137,13 +136,5 @@ function PaymentsContent() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function PaymentsPage() {
-  return (
-    <AuthGuard>
-      <PaymentsContent />
-    </AuthGuard>
   );
 }

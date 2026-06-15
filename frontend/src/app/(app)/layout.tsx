@@ -2,23 +2,35 @@
 
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-import AuthGuard from "@/components/AuthGuard";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return null;
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
-    <AuthGuard>
-      <div className="flex min-h-screen">
-        {/* Desktop sidebar */}
-        <div className="hidden md:flex">
-          <Sidebar />
-        </div>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
 
-        {/* Main content */}
-        <main className="flex-1 pb-16 md:pb-0">{children}</main>
+      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
 
-        {/* Mobile bottom nav */}
-        <BottomNav />
-      </div>
-    </AuthGuard>
+      <BottomNav />
+    </div>
   );
 }

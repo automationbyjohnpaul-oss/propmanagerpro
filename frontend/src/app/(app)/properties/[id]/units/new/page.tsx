@@ -4,7 +4,6 @@ import { useParams, useRouter } from "next/navigation";
 import { createUnit, CreateUnitInput } from "@/services/unitApi";
 import PageHeader from "@/components/PageHeader";
 import UnitForm from "@/components/forms/UnitForm";
-import AuthGuard from "@/components/AuthGuard";
 
 export default function NewUnitPage() {
   const params = useParams();
@@ -21,19 +20,17 @@ export default function NewUnitPage() {
   }
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <PageHeader
-            title="Add Unit"
-            description="Add a new unit to this property"
-          />
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-2xl mx-auto">
+        <PageHeader
+          title="Add Unit"
+          description="Add a new unit to this property"
+        />
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <UnitForm onSubmit={handleSubmit} onCancel={() => router.back()} />
-          </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <UnitForm onSubmit={handleSubmit} onCancel={() => router.back()} />
         </div>
       </div>
-    </AuthGuard>
+    </div>
   );
 }

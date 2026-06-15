@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { CreateLeaseInput } from "@/services/leaseApi";
 import { getProperties, Property } from "@/services/propertyApi";
 import { getUnits, Unit } from "@/services/unitApi";
@@ -36,24 +36,35 @@ export default function LeaseForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load properties and tenants on mount (NO unit fetch)
   useEffect(() => {
     async function loadOptions() {
-      const [props, uns, tens] = await Promise.all([
-        getProperties(),
-        getUnits(),
-        getTenants(),
-      ]);
+      const [props, tens] = await Promise.all([getProperties(), getTenants()]);
       setProperties(props);
-      setUnits(uns);
       setTenants(tens);
     }
     loadOptions();
   }, []);
 
-  const filteredUnits = useMemo(() => {
-    if (!formData.propertyId) return units;
-    return units.filter((u) => u.propertyId === formData.propertyId);
-  }, [units, formData.propertyId]);
+  // Function to fetch units for a specific property
+  const loadUnits = async (propertyId: string) => {
+    try {
+      const data = await getUnits(propertyId);
+      setUnits(data);
+    } catch (err) {
+      console.error("Failed to fetch units:", err);
+      setUnits([]);
+    }
+  };
+
+  // Fetch units ONLY when propertyId is selected
+  useEffect(() => {
+    if (!formData.propertyId) {
+      setUnits([]);
+      return;
+    }
+    loadUnits(formData.propertyId);
+  }, [formData.propertyId]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -130,10 +141,9 @@ export default function LeaseForm({
             className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           >
             <option value="">Select unit</option>
-            {filteredUnits.map((u) => (
+            {units.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.unitNumber}
-                {u.property ? ` (${u.property.name})` : ""}
               </option>
             ))}
           </select>

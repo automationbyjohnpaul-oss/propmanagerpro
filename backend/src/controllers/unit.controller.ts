@@ -17,10 +17,33 @@ interface AuthRequest extends Request {
   userId?: string;
 }
 
+// ✅ UPDATED: getUnits now REQUIRES propertyId query parameter
 export async function getUnits(req: AuthRequest, res: Response) {
   try {
     const userId = req.userId!;
-    const units = await getAllUnits(userId);
+    const { propertyId } = req.query;
+
+    // STRICT: propertyId is REQUIRED
+    if (!propertyId || typeof propertyId !== "string") {
+      return res.status(400).json({
+        message: "propertyId query parameter is required",
+      });
+    }
+
+    // Verify property belongs to user
+    const property = await prisma.property.findFirst({
+      where: { id: propertyId, userId },
+    });
+
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    const units = await prisma.unit.findMany({
+      where: { propertyId },
+      orderBy: { unitNumber: "asc" },
+    });
+
     res.status(200).json(units);
   } catch (error) {
     console.error(error);
@@ -149,3 +172,5 @@ export async function deleteUnitHandler(req: AuthRequest, res: Response) {
     return res.status(500).json({ message: "Failed to delete unit" });
   }
 }
+
+// ✅ REMOVED: generateUnits function

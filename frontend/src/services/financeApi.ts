@@ -24,14 +24,20 @@ export interface OutstandingRent {
   amountDue: number;
 }
 
-export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  return api.get("/api/finance/dashboard");
+export async function getDashboardMetrics(
+  signal?: AbortSignal,
+): Promise<DashboardMetrics> {
+  return api.get("/api/finance/dashboard", signal);
 }
 
-export async function getRevenueByProperty(): Promise<PropertyRevenue[]> {
-  return api.get("/api/finance/revenue-by-property");
+export async function getRevenueByProperty(
+  signal?: AbortSignal,
+): Promise<PropertyRevenue[]> {
+  return api.get("/api/finance/revenue-by-property", signal);
 }
 
-export async function getOutstandingRent(): Promise<OutstandingRent[]> {
-  return api.get("/api/finance/outstanding-rent");
+export async function getOutstandingRent(
+  signal?: AbortSignal,
+): Promise<OutstandingRent[]> {
+  return api.get("/api/finance/outstanding-rent", signal);
 }

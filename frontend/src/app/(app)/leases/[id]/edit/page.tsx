@@ -12,7 +12,6 @@ import PageHeader from "@/components/PageHeader";
 import LeaseForm from "@/components/forms/LeaseForm";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
-import AuthGuard from "@/components/AuthGuard";
 
 export default function EditLeasePage() {
   const params = useParams();
@@ -56,29 +55,27 @@ export default function EditLeasePage() {
     return <ErrorState message={error || "Lease not found"} />;
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <PageHeader title="Edit Lease" description="Update lease agreement" />
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <LeaseForm
-              initialData={{
-                startDate: lease.startDate,
-                endDate: lease.endDate,
-                monthlyRent: Number(lease.monthlyRent),
-                securityDeposit: Number(lease.securityDeposit),
-                isActive: lease.isActive,
-                propertyId: lease.propertyId,
-                unitId: lease.unitId,
-                tenantId: lease.tenantId,
-              }}
-              onSubmit={handleSubmit}
-              submitLabel="Update Lease"
-              onCancel={() => router.back()}
-            />
-          </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-2xl mx-auto">
+        <PageHeader title="Edit Lease" description="Update lease agreement" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <LeaseForm
+            initialData={{
+              startDate: lease.startDate,
+              endDate: lease.endDate,
+              monthlyRent: Number(lease.monthlyRent),
+              securityDeposit: Number(lease.securityDeposit),
+              isActive: lease.isActive,
+              propertyId: lease.propertyId,
+              unitId: lease.unitId,
+              tenantId: lease.tenantId,
+            }}
+            onSubmit={handleSubmit}
+            submitLabel="Update Lease"
+            onCancel={() => router.back()}
+          />
         </div>
       </div>
-    </AuthGuard>
+    </div>
   );
 }

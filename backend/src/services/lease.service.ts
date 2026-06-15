@@ -2,7 +2,12 @@ import { prisma } from "../lib/prisma";
 
 export async function getAllLeases(userId: string) {
   return prisma.lease.findMany({
-    where: { property: { userId } },
+    where: {
+      property: {
+        userId,
+        deletedAt: null, // 👈 Add this
+      },
+    },
     orderBy: { createdAt: "desc" },
     include: {
       property: true,
@@ -16,7 +21,10 @@ export async function getLeaseById(id: string, userId: string) {
   return prisma.lease.findFirst({
     where: {
       id,
-      property: { userId },
+      property: {
+        userId,
+        deletedAt: null, // 👈 Add this
+      },
     },
     include: {
       property: true,
@@ -36,6 +44,20 @@ export async function createLease(data: {
   unitId: string;
   tenantId: string;
 }) {
+  // First check if the property exists and is not deleted
+  const property = await prisma.property.findFirst({
+    where: {
+      id: data.propertyId,
+      deletedAt: null,
+    },
+  });
+
+  if (!property) {
+    throw new Error(
+      "Cannot create lease: Property not found or has been deleted",
+    );
+  }
+
   return prisma.lease.create({
     data: {
       startDate: new Date(data.startDate),
@@ -72,7 +94,10 @@ export async function updateLease(
   const lease = await prisma.lease.findFirst({
     where: {
       id,
-      property: { userId },
+      property: {
+        userId,
+        deletedAt: null, // 👈 Add this
+      },
     },
   });
 
@@ -98,7 +123,10 @@ export async function deleteLease(id: string, userId: string) {
   const lease = await prisma.lease.findFirst({
     where: {
       id,
-      property: { userId },
+      property: {
+        userId,
+        deletedAt: null, // 👈 Add this
+      },
     },
   });
 
@@ -114,7 +142,10 @@ export async function findActiveLeaseByUnit(unitId: string, userId: string) {
     where: {
       unitId,
       isActive: true,
-      property: { userId },
+      property: {
+        userId,
+        deletedAt: null, // 👈 Add this
+      },
     },
   });
 }
