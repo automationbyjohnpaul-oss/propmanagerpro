@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import {
   getAllPayments,
@@ -11,11 +11,11 @@ import {
   updatePaymentSchema,
 } from "../validators/payment.validator";
 import { prisma } from "../lib/prisma";
-import { AuthRequest } from "../middleware/auth.middleware";
 
-export async function getPayments(req: AuthRequest, res: Response) {
+export async function getPayments(req: Request, res: Response) {
   try {
-    const payments = await getAllPayments(req.userId!);
+    const userId = (req as any).userId!;
+    const payments = await getAllPayments(userId);
     res.status(200).json(payments);
   } catch (error) {
     console.error(error);
@@ -23,9 +23,10 @@ export async function getPayments(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getPayment(req: AuthRequest, res: Response) {
+export async function getPayment(req: Request, res: Response) {
   try {
-    const payment = await getPaymentById(req.params.id as string, req.userId!);
+    const userId = (req as any).userId!;
+    const payment = await getPaymentById(req.params.id as string, userId);
 
     if (!payment) {
       return res.status(404).json({ message: "Payment not found" });
@@ -38,7 +39,7 @@ export async function getPayment(req: AuthRequest, res: Response) {
   }
 }
 
-export async function createPaymentHandler(req: AuthRequest, res: Response) {
+export async function createPaymentHandler(req: Request, res: Response) {
   const validation = createPaymentSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -82,7 +83,9 @@ export async function createPaymentHandler(req: AuthRequest, res: Response) {
   }
 }
 
-export async function updatePaymentHandler(req: AuthRequest, res: Response) {
+export async function updatePaymentHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
+
   // If leaseId or tenantId are being changed, validate ownership
   if (req.body.leaseId || req.body.tenantId) {
     const leaseId = req.body.leaseId;
@@ -144,7 +147,7 @@ export async function updatePaymentHandler(req: AuthRequest, res: Response) {
   try {
     const payment = await updatePayment(
       req.params.id as string,
-      req.userId!,
+      userId,
       validation.data,
     );
     return res.status(200).json(payment);

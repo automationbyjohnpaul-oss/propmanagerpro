@@ -1,14 +1,14 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import {
   getDashboardMetrics,
   getRevenueByProperty,
   getOutstandingRent,
 } from "../services/financeAnalytics.service";
-import { AuthRequest } from "../middleware/auth.middleware";
 
-export async function getDashboard(req: AuthRequest, res: Response) {
+export async function getDashboard(req: Request, res: Response) {
   try {
-    const dashboard = await getDashboardMetrics(req.userId!);
+    const userId = (req as any).userId!;
+    const dashboard = await getDashboardMetrics(userId);
     return res.status(200).json(dashboard);
   } catch (error) {
     console.error(error);
@@ -18,9 +18,10 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getRevenue(req: AuthRequest, res: Response) {
+export async function getRevenue(req: Request, res: Response) {
   try {
-    const revenue = await getRevenueByProperty(req.userId!);
+    const userId = (req as any).userId!;
+    const revenue = await getRevenueByProperty(userId);
     return res.status(200).json(revenue);
   } catch (error) {
     console.error(error);
@@ -28,9 +29,10 @@ export async function getRevenue(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getOutstanding(req: AuthRequest, res: Response) {
+export async function getOutstanding(req: Request, res: Response) {
   try {
-    const outstanding = await getOutstandingRent(req.userId!);
+    const userId = (req as any).userId!;
+    const outstanding = await getOutstandingRent(userId);
     return res.status(200).json(outstanding);
   } catch (error) {
     console.error(error);

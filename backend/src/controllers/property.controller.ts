@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import {
   getAllProperties,
   getPropertyById,
@@ -10,12 +10,11 @@ import {
   createPropertySchema,
   updatePropertySchema,
 } from "../validators/property.validator";
-import { AuthRequest } from "../middleware/auth.middleware";
 import { prisma } from "../lib/prisma";
 
-export async function getProperties(req: AuthRequest, res: Response) {
+export async function getProperties(req: Request, res: Response) {
   try {
-    const userId = req.userId!;
+    const userId = (req as any).userId!;
     const { status } = req.query; // 'active', 'archived', or undefined
 
     // Build where clause based on status
@@ -46,12 +45,10 @@ export async function getProperties(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getProperty(req: AuthRequest, res: Response) {
+export async function getProperty(req: Request, res: Response) {
   try {
-    const property = await getPropertyById(
-      req.params.id as string,
-      req.userId!,
-    );
+    const userId = (req as any).userId!;
+    const property = await getPropertyById(req.params.id as string, userId);
     if (!property) {
       return res.status(404).json({ message: "Property not found" });
     }
@@ -62,7 +59,8 @@ export async function getProperty(req: AuthRequest, res: Response) {
   }
 }
 
-export async function createPropertyHandler(req: AuthRequest, res: Response) {
+export async function createPropertyHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
   const validation = createPropertySchema.safeParse(req.body);
   if (!validation.success) {
     return res.status(400).json({
@@ -74,7 +72,7 @@ export async function createPropertyHandler(req: AuthRequest, res: Response) {
   try {
     const property = await createProperty({
       ...validation.data,
-      userId: req.userId!,
+      userId: userId,
     });
     return res.status(201).json(property);
   } catch (error) {
@@ -83,7 +81,8 @@ export async function createPropertyHandler(req: AuthRequest, res: Response) {
   }
 }
 
-export async function updatePropertyHandler(req: AuthRequest, res: Response) {
+export async function updatePropertyHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
   const validation = updatePropertySchema.safeParse(req.body);
   if (!validation.success) {
     return res.status(400).json({
@@ -95,7 +94,7 @@ export async function updatePropertyHandler(req: AuthRequest, res: Response) {
   try {
     const property = await updateProperty(
       req.params.id as string,
-      req.userId!,
+      userId,
       validation.data,
     );
     return res.status(200).json(property);
@@ -112,9 +111,9 @@ export async function updatePropertyHandler(req: AuthRequest, res: Response) {
 // ARCHIVE — Soft Delete
 // Only active properties (deletedAt: null) can be archived
 // ============================================
-export async function archiveProperty(req: AuthRequest, res: Response) {
+export async function archiveProperty(req: Request, res: Response) {
   try {
-    const userId = req.userId!;
+    const userId = (req as any).userId!;
     const idParam = req.params.id;
     const id = Array.isArray(idParam) ? idParam[0] : idParam;
 
@@ -147,9 +146,9 @@ export async function archiveProperty(req: AuthRequest, res: Response) {
 // NO deletedAt filter in query — must find archived property
 // Then validate it's actually archived before restoring
 // ============================================
-export async function restoreProperty(req: AuthRequest, res: Response) {
+export async function restoreProperty(req: Request, res: Response) {
   try {
-    const userId = req.userId!;
+    const userId = (req as any).userId!;
     const idParam = req.params.id;
     const id = Array.isArray(idParam) ? idParam[0] : idParam;
 

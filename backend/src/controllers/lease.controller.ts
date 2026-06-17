@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import {
   getAllLeases,
   getLeaseById,
@@ -12,11 +12,11 @@ import {
   updateLeaseSchema,
 } from "../validators/lease.validator";
 import { prisma } from "../lib/prisma";
-import { AuthRequest } from "../middleware/auth.middleware";
 
-export async function getLeases(req: AuthRequest, res: Response) {
+export async function getLeases(req: Request, res: Response) {
   try {
-    const leases = await getAllLeases(req.userId!);
+    const userId = (req as any).userId!;
+    const leases = await getAllLeases(userId);
     res.status(200).json(leases);
   } catch (error) {
     console.error(error);
@@ -24,9 +24,10 @@ export async function getLeases(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getLease(req: AuthRequest, res: Response) {
+export async function getLease(req: Request, res: Response) {
   try {
-    const lease = await getLeaseById(req.params.id as string, req.userId!);
+    const userId = (req as any).userId!;
+    const lease = await getLeaseById(req.params.id as string, userId);
 
     if (!lease) {
       return res.status(404).json({ message: "Lease not found" });
@@ -39,7 +40,8 @@ export async function getLease(req: AuthRequest, res: Response) {
   }
 }
 
-export async function createLeaseHandler(req: AuthRequest, res: Response) {
+export async function createLeaseHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
   const validation = createLeaseSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -80,7 +82,7 @@ export async function createLeaseHandler(req: AuthRequest, res: Response) {
   if (validation.data.isActive) {
     const activeLease = await findActiveLeaseByUnit(
       validation.data.unitId,
-      req.userId!,
+      userId,
     );
 
     if (activeLease) {
@@ -99,11 +101,9 @@ export async function createLeaseHandler(req: AuthRequest, res: Response) {
   }
 }
 
-export async function updateLeaseHandler(req: AuthRequest, res: Response) {
-  const existingLease = await getLeaseById(
-    req.params.id as string,
-    req.userId!,
-  );
+export async function updateLeaseHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
+  const existingLease = await getLeaseById(req.params.id as string, userId);
 
   if (!existingLease) {
     return res.status(404).json({ message: "Lease not found" });
@@ -149,7 +149,7 @@ export async function updateLeaseHandler(req: AuthRequest, res: Response) {
   if (validation.data.isActive) {
     const activeLease = await findActiveLeaseByUnit(
       validation.data.unitId,
-      req.userId!,
+      userId,
     );
 
     if (activeLease && activeLease.id !== req.params.id) {
@@ -162,7 +162,7 @@ export async function updateLeaseHandler(req: AuthRequest, res: Response) {
   try {
     const lease = await updateLease(
       req.params.id as string,
-      req.userId!,
+      userId,
       validation.data,
     );
     return res.status(200).json(lease);
@@ -172,18 +172,16 @@ export async function updateLeaseHandler(req: AuthRequest, res: Response) {
   }
 }
 
-export async function deleteLeaseHandler(req: AuthRequest, res: Response) {
-  const existingLease = await getLeaseById(
-    req.params.id as string,
-    req.userId!,
-  );
+export async function deleteLeaseHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
+  const existingLease = await getLeaseById(req.params.id as string, userId);
 
   if (!existingLease) {
     return res.status(404).json({ message: "Lease not found" });
   }
 
   try {
-    await deleteLease(req.params.id as string, req.userId!);
+    await deleteLease(req.params.id as string, userId);
     return res.status(204).send();
   } catch (error) {
     console.error(error);

@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import {
   getAllTenants,
   getTenantById,
@@ -10,11 +10,11 @@ import {
   createTenantSchema,
   updateTenantSchema,
 } from "../validators/tenant.validator";
-import { AuthRequest } from "../middleware/auth.middleware";
 
-export async function getTenants(req: AuthRequest, res: Response) {
+export async function getTenants(req: Request, res: Response) {
   try {
-    const tenants = await getAllTenants(req.userId!);
+    const userId = (req as any).userId!;
+    const tenants = await getAllTenants(userId);
     res.status(200).json(tenants);
   } catch (error) {
     console.error(error);
@@ -22,9 +22,10 @@ export async function getTenants(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getTenant(req: AuthRequest, res: Response) {
+export async function getTenant(req: Request, res: Response) {
   try {
-    const tenant = await getTenantById(req.params.id as string, req.userId!);
+    const userId = (req as any).userId!;
+    const tenant = await getTenantById(req.params.id as string, userId);
 
     if (!tenant) {
       return res.status(404).json({ message: "Tenant not found" });
@@ -37,7 +38,8 @@ export async function getTenant(req: AuthRequest, res: Response) {
   }
 }
 
-export async function createTenantHandler(req: AuthRequest, res: Response) {
+export async function createTenantHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
   const validation = createTenantSchema.safeParse(req.body);
 
   if (!validation.success) {
@@ -48,7 +50,7 @@ export async function createTenantHandler(req: AuthRequest, res: Response) {
   }
 
   try {
-    const tenant = await createTenant(validation.data, req.userId!);
+    const tenant = await createTenant(validation.data, userId);
     return res.status(201).json(tenant);
   } catch (error: any) {
     console.error(error);
@@ -63,11 +65,9 @@ export async function createTenantHandler(req: AuthRequest, res: Response) {
   }
 }
 
-export async function updateTenantHandler(req: AuthRequest, res: Response) {
-  const existingTenant = await getTenantById(
-    req.params.id as string,
-    req.userId!,
-  );
+export async function updateTenantHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
+  const existingTenant = await getTenantById(req.params.id as string, userId);
 
   if (!existingTenant) {
     return res.status(404).json({ message: "Tenant not found" });
@@ -85,7 +85,7 @@ export async function updateTenantHandler(req: AuthRequest, res: Response) {
   try {
     const tenant = await updateTenant(
       req.params.id as string,
-      req.userId!,
+      userId,
       validation.data,
     );
     return res.status(200).json(tenant);
@@ -102,18 +102,16 @@ export async function updateTenantHandler(req: AuthRequest, res: Response) {
   }
 }
 
-export async function deleteTenantHandler(req: AuthRequest, res: Response) {
-  const existingTenant = await getTenantById(
-    req.params.id as string,
-    req.userId!,
-  );
+export async function deleteTenantHandler(req: Request, res: Response) {
+  const userId = (req as any).userId!;
+  const existingTenant = await getTenantById(req.params.id as string, userId);
 
   if (!existingTenant) {
     return res.status(404).json({ message: "Tenant not found" });
   }
 
   try {
-    await deleteTenant(req.params.id as string, req.userId!);
+    await deleteTenant(req.params.id as string, userId);
     return res.status(204).send();
   } catch (error) {
     console.error(error);
