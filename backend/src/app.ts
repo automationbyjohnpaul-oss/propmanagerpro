@@ -42,6 +42,16 @@ app.use(express.json());
 // PUBLIC ROUTES
 // ============================================
 
+// Root route for Railway health check
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    status: "OK",
+    service: "PropManager Pro Backend",
+    env: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Health check (must work even if auth fails)
 app.use("/health", healthRoutes);
 app.use("/api/auth", authRoutes);
