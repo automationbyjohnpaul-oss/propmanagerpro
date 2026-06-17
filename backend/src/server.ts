@@ -1,6 +1,6 @@
 import app from "./app";
 
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 4000;
 
 /**
  * IMPORTANT: Railway requires 0.0.0.0 binding
