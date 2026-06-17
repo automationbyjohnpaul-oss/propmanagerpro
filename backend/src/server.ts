@@ -3,9 +3,10 @@ import app from "./app";
 const PORT = process.env.PORT || 4000;
 
 /**
- * Start server
+ * IMPORTANT: Railway requires 0.0.0.0 binding
+ * This allows the container to accept external requests
  */
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log("=================================");
   console.log("🚀 PropManager Pro Backend Started");
   console.log(`📡 Port: ${PORT}`);
