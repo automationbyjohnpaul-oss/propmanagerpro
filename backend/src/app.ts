@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
 import authRoutes from "./routes/auth.routes";
 import healthRoutes from "./routes/health.routes";
@@ -24,6 +25,15 @@ console.log("📡 DATABASE_URL:", !!process.env.DATABASE_URL);
 console.log("📡 FRONTEND_URL:", process.env.FRONTEND_URL || "NOT SET");
 console.log("📡 PORT:", process.env.PORT || "NOT SET (default 4000)");
 console.log("=================================");
+
+// ============================================
+// SECURITY HEADERS (Helmet)
+// ============================================
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  }),
+);
 
 // ============================================
 // CORS
