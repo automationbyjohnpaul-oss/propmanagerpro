@@ -13,8 +13,12 @@ import paymentRoutes from "./routes/payment.routes";
 import financeAnalyticsRoutes from "./routes/financeAnalytics.routes";
 import { authMiddleware } from "./middleware/auth.middleware";
 import { errorMiddleware } from "./middleware/error.middleware";
+import { authLimiter } from "./middleware/rateLimit.middleware";
 
 const app = express();
+
+// Trust proxy (required for Railway)
+app.set("trust proxy", 1);
 
 // ============================================
 // ENVIRONMENT VARIABLE VALIDATION
@@ -65,7 +69,9 @@ app.get("/", (_req, res) => {
 
 // Health check (must work even if auth fails)
 app.use("/health", healthRoutes);
-app.use("/api/auth", authRoutes);
+
+// Auth routes with rate limiting
+app.use("/api/auth", authLimiter, authRoutes);
 
 // ============================================
 // PROTECTED ROUTES
