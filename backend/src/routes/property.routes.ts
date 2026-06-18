@@ -5,17 +5,17 @@ import {
   createPropertyHandler,
   updatePropertyHandler,
   archiveProperty,
-  restoreProperty, // 👈 Add this
+  restoreProperty,
 } from "../controllers/property.controller";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = Router();
 
-router.get("/", getProperties);
-router.get("/:id", getProperty);
-router.post("/", createPropertyHandler);
-router.put("/:id", updatePropertyHandler);
-router.patch("/:id/archive", archiveProperty); // Archive endpoint (soft delete)
-router.patch("/:id/restore", restoreProperty); // 👈 Add restore route
-// ❌ NO delete endpoint - removed per Phase 3 requirements
+router.get("/", asyncHandler(getProperties));
+router.get("/:id", asyncHandler(getProperty));
+router.post("/", asyncHandler(createPropertyHandler));
+router.put("/:id", asyncHandler(updatePropertyHandler));
+router.patch("/:id/archive", asyncHandler(archiveProperty));
+router.patch("/:id/restore", asyncHandler(restoreProperty));
 
 export default router;

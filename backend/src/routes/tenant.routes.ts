@@ -6,13 +6,14 @@ import {
   updateTenantHandler,
   deleteTenantHandler,
 } from "../controllers/tenant.controller";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = Router();
 
-router.get("/", getTenants);
-router.get("/:id", getTenant);
-router.post("/", createTenantHandler);
-router.put("/:id", updateTenantHandler);
-router.delete("/:id", deleteTenantHandler);
+router.get("/", asyncHandler(getTenants));
+router.get("/:id", asyncHandler(getTenant));
+router.post("/", asyncHandler(createTenantHandler));
+router.put("/:id", asyncHandler(updateTenantHandler));
+router.delete("/:id", asyncHandler(deleteTenantHandler));
 
 export default router;

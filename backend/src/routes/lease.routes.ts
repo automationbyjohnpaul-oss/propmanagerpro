@@ -6,13 +6,14 @@ import {
   updateLeaseHandler,
   deleteLeaseHandler,
 } from "../controllers/lease.controller";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = Router();
 
-router.get("/", getLeases);
-router.get("/:id", getLease);
-router.post("/", createLeaseHandler);
-router.put("/:id", updateLeaseHandler);
-router.delete("/:id", deleteLeaseHandler);
+router.get("/", asyncHandler(getLeases));
+router.get("/:id", asyncHandler(getLease));
+router.post("/", asyncHandler(createLeaseHandler));
+router.put("/:id", asyncHandler(updateLeaseHandler));
+router.delete("/:id", asyncHandler(deleteLeaseHandler));
 
 export default router;

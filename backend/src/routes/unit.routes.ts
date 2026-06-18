@@ -6,13 +6,14 @@ import {
   updateUnitHandler,
   deleteUnitHandler,
 } from "../controllers/unit.controller";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const router = Router();
 
-router.get("/", getUnits);
-router.get("/:id", getUnit);
-router.post("/", createUnitHandler);
-router.put("/:id", updateUnitHandler);
-router.delete("/:id", deleteUnitHandler);
+router.get("/", asyncHandler(getUnits));
+router.get("/:id", asyncHandler(getUnit));
+router.post("/", asyncHandler(createUnitHandler));
+router.put("/:id", asyncHandler(updateUnitHandler));
+router.delete("/:id", asyncHandler(deleteUnitHandler));
 
 export default router;
