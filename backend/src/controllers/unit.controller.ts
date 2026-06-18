@@ -6,10 +6,6 @@ import {
   updateUnit,
   deleteUnit,
 } from "../services/unit.service";
-import {
-  createUnitSchema,
-  updateUnitSchema,
-} from "../validators/unit.validator";
 import { prisma } from "../lib/prisma";
 
 // ✅ UPDATED: getUnits now REQUIRES propertyId query parameter
@@ -63,31 +59,25 @@ export async function getUnit(req: Request, res: Response) {
 }
 
 export async function createUnitHandler(req: Request, res: Response) {
-  const userId = (req as any).userId!;
-  const validation = createUnitSchema.safeParse(req.body);
-
-  if (!validation.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      errors: validation.error.flatten(),
-    });
-  }
-
-  const property = await prisma.property.findUnique({
-    where: { id: validation.data.propertyId },
-  });
-
-  if (!property) {
-    return res.status(404).json({ message: "Property not found" });
-  }
-
-  // Verify the property belongs to the authenticated user
-  if (property.userId !== userId) {
-    return res.status(403).json({ message: "You don't own this property" });
-  }
-
   try {
-    const unit = await createUnit(validation.data);
+    const userId = (req as any).userId!;
+    // req.body is already validated by middleware
+    const { propertyId } = req.body;
+
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+    });
+
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    // Verify the property belongs to the authenticated user
+    if (property.userId !== userId) {
+      return res.status(403).json({ message: "You don't own this property" });
+    }
+
+    const unit = await createUnit(req.body);
     return res.status(201).json(unit);
   } catch (error: any) {
     console.error(error);
@@ -103,41 +93,33 @@ export async function createUnitHandler(req: Request, res: Response) {
 }
 
 export async function updateUnitHandler(req: Request, res: Response) {
-  const userId = (req as any).userId!;
-  const existingUnit = await getUnitById(req.params.id as string, userId);
-
-  if (!existingUnit) {
-    return res.status(404).json({ message: "Unit not found" });
-  }
-
-  const validation = updateUnitSchema.safeParse(req.body);
-
-  if (!validation.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      errors: validation.error.flatten(),
-    });
-  }
-
-  const property = await prisma.property.findUnique({
-    where: { id: validation.data.propertyId },
-  });
-
-  if (!property) {
-    return res.status(404).json({ message: "Property not found" });
-  }
-
-  // Verify the property belongs to the authenticated user
-  if (property.userId !== userId) {
-    return res.status(403).json({ message: "You don't own this property" });
-  }
-
   try {
-    const unit = await updateUnit(
-      req.params.id as string,
-      userId,
-      validation.data,
-    );
+    const userId = (req as any).userId!;
+    const unitId = req.params.id as string;
+
+    const existingUnit = await getUnitById(unitId, userId);
+
+    if (!existingUnit) {
+      return res.status(404).json({ message: "Unit not found" });
+    }
+
+    // req.body is already validated by middleware
+    const { propertyId } = req.body;
+
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+    });
+
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    // Verify the property belongs to the authenticated user
+    if (property.userId !== userId) {
+      return res.status(403).json({ message: "You don't own this property" });
+    }
+
+    const unit = await updateUnit(unitId, userId, req.body);
     return res.status(200).json(unit);
   } catch (error: any) {
     console.error(error);
@@ -153,15 +135,17 @@ export async function updateUnitHandler(req: Request, res: Response) {
 }
 
 export async function deleteUnitHandler(req: Request, res: Response) {
-  const userId = (req as any).userId!;
-  const existingUnit = await getUnitById(req.params.id as string, userId);
-
-  if (!existingUnit) {
-    return res.status(404).json({ message: "Unit not found" });
-  }
-
   try {
-    await deleteUnit(req.params.id as string, userId);
+    const userId = (req as any).userId!;
+    const unitId = req.params.id as string;
+
+    const existingUnit = await getUnitById(unitId, userId);
+
+    if (!existingUnit) {
+      return res.status(404).json({ message: "Unit not found" });
+    }
+
+    await deleteUnit(unitId, userId);
     return res.status(204).send();
   } catch (error: any) {
     console.error(error);

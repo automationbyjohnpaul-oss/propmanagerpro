@@ -8,4 +8,4 @@ export const createTenantSchema = z.object({
   emergencyContact: z.string().trim().optional(),
 });
 
-export const updateTenantSchema = createTenantSchema;
+export const updateTenantSchema = createTenantSchema.partial();

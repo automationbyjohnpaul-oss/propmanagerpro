@@ -6,10 +6,6 @@ import {
   createPayment,
   updatePayment,
 } from "../services/payment.service";
-import {
-  createPaymentSchema,
-  updatePaymentSchema,
-} from "../validators/payment.validator";
 import { prisma } from "../lib/prisma";
 
 export async function getPayments(req: Request, res: Response) {
@@ -40,42 +36,36 @@ export async function getPayment(req: Request, res: Response) {
 }
 
 export async function createPaymentHandler(req: Request, res: Response) {
-  const validation = createPaymentSchema.safeParse(req.body);
-
-  if (!validation.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      errors: validation.error.flatten(),
-    });
-  }
-
-  // Rule: Lease must exist
-  const lease = await prisma.lease.findUnique({
-    where: { id: validation.data.leaseId },
-  });
-
-  if (!lease) {
-    return res.status(404).json({ message: "Lease not found" });
-  }
-
-  // Rule: Tenant must exist
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: validation.data.tenantId },
-  });
-
-  if (!tenant) {
-    return res.status(404).json({ message: "Tenant not found" });
-  }
-
-  // Rule: Tenant must belong to the lease
-  if (lease.tenantId !== validation.data.tenantId) {
-    return res.status(409).json({
-      message: "Tenant does not belong to this lease",
-    });
-  }
-
   try {
-    const payment = await createPayment(validation.data);
+    const { body } = req;
+    // req.body is already validated by middleware
+
+    // Rule: Lease must exist
+    const lease = await prisma.lease.findUnique({
+      where: { id: body.leaseId },
+    });
+
+    if (!lease) {
+      return res.status(404).json({ message: "Lease not found" });
+    }
+
+    // Rule: Tenant must exist
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: body.tenantId },
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ message: "Tenant not found" });
+    }
+
+    // Rule: Tenant must belong to the lease
+    if (lease.tenantId !== body.tenantId) {
+      return res.status(409).json({
+        message: "Tenant does not belong to this lease",
+      });
+    }
+
+    const payment = await createPayment(body);
     return res.status(201).json(payment);
   } catch (error: any) {
     console.error(error);
@@ -84,72 +74,62 @@ export async function createPaymentHandler(req: Request, res: Response) {
 }
 
 export async function updatePaymentHandler(req: Request, res: Response) {
-  const userId = (req as any).userId!;
+  try {
+    const userId = (req as any).userId!;
+    const paymentId = req.params.id as string;
+    const { body } = req;
+    // req.body is already validated by middleware
 
-  // If leaseId or tenantId are being changed, validate ownership
-  if (req.body.leaseId || req.body.tenantId) {
-    const leaseId = req.body.leaseId;
-    const tenantId = req.body.tenantId;
+    // If leaseId or tenantId are being changed, validate ownership
+    if (body.leaseId || body.tenantId) {
+      const leaseId = body.leaseId;
+      const tenantId = body.tenantId;
 
-    if (leaseId && tenantId) {
-      // Both provided — validate full relationship
-      const lease = await prisma.lease.findUnique({
-        where: { id: leaseId },
-      });
-
-      if (!lease) {
-        return res.status(404).json({ message: "Lease not found" });
-      }
-
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-      });
-
-      if (!tenant) {
-        return res.status(404).json({ message: "Tenant not found" });
-      }
-
-      if (lease.tenantId !== tenantId) {
-        return res.status(409).json({
-          message: "Tenant does not belong to this lease",
+      if (leaseId && tenantId) {
+        // Both provided — validate full relationship
+        const lease = await prisma.lease.findUnique({
+          where: { id: leaseId },
         });
-      }
-    } else if (leaseId) {
-      // Only leaseId changed — validate it exists
-      const lease = await prisma.lease.findUnique({
-        where: { id: leaseId },
-      });
 
-      if (!lease) {
-        return res.status(404).json({ message: "Lease not found" });
-      }
-    } else if (tenantId) {
-      // Only tenantId changed — validate it exists
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-      });
+        if (!lease) {
+          return res.status(404).json({ message: "Lease not found" });
+        }
 
-      if (!tenant) {
-        return res.status(404).json({ message: "Tenant not found" });
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: tenantId },
+        });
+
+        if (!tenant) {
+          return res.status(404).json({ message: "Tenant not found" });
+        }
+
+        if (lease.tenantId !== tenantId) {
+          return res.status(409).json({
+            message: "Tenant does not belong to this lease",
+          });
+        }
+      } else if (leaseId) {
+        // Only leaseId changed — validate it exists
+        const lease = await prisma.lease.findUnique({
+          where: { id: leaseId },
+        });
+
+        if (!lease) {
+          return res.status(404).json({ message: "Lease not found" });
+        }
+      } else if (tenantId) {
+        // Only tenantId changed — validate it exists
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: tenantId },
+        });
+
+        if (!tenant) {
+          return res.status(404).json({ message: "Tenant not found" });
+        }
       }
     }
-  }
 
-  const validation = updatePaymentSchema.safeParse(req.body);
-
-  if (!validation.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      errors: validation.error.flatten(),
-    });
-  }
-
-  try {
-    const payment = await updatePayment(
-      req.params.id as string,
-      userId,
-      validation.data,
-    );
+    const payment = await updatePayment(paymentId, userId, body);
     return res.status(200).json(payment);
   } catch (error: any) {
     console.error(error);
