@@ -60,18 +60,11 @@ export async function getProperty(req: Request, res: Response) {
 }
 
 export async function createPropertyHandler(req: Request, res: Response) {
-  const userId = (req as any).userId!;
-  const validation = createPropertySchema.safeParse(req.body);
-  if (!validation.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      errors: validation.error.flatten(),
-    });
-  }
-
   try {
+    const userId = (req as any).userId!;
+    // req.body is already validated by middleware
     const property = await createProperty({
-      ...validation.data,
+      ...req.body,
       userId: userId,
     });
     return res.status(201).json(property);
@@ -82,20 +75,13 @@ export async function createPropertyHandler(req: Request, res: Response) {
 }
 
 export async function updatePropertyHandler(req: Request, res: Response) {
-  const userId = (req as any).userId!;
-  const validation = updatePropertySchema.safeParse(req.body);
-  if (!validation.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      errors: validation.error.flatten(),
-    });
-  }
-
   try {
+    const userId = (req as any).userId!;
+    // req.body is already validated by middleware
     const property = await updateProperty(
       req.params.id as string,
       userId,
-      validation.data,
+      req.body,
     );
     return res.status(200).json(property);
   } catch (error: any) {
