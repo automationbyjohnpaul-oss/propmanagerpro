@@ -6,166 +6,235 @@ import {
   updateProperty,
   deleteProperty,
 } from "../services/property.service";
-import {
-  createPropertySchema,
-  updatePropertySchema,
-} from "../validators/property.validator";
 import { prisma } from "../lib/prisma";
+import { createAuditLog } from "../services/audit.service";
+import { asyncHandler } from "../middleware/asyncHandler";
 
-export async function getProperties(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const { status } = req.query; // 'active', 'archived', or undefined
+// ============================================
+// HELPERS
+// ============================================
 
-    // Build where clause based on status
-    if (status === "archived") {
-      // Show archived properties only
-      const properties = await prisma.property.findMany({
-        where: {
-          userId,
-          deletedAt: { not: null },
-        },
-        orderBy: { createdAt: "desc" },
-      });
-      return res.status(200).json(properties);
-    } else {
-      // Default: show active properties only (not archived)
-      const properties = await prisma.property.findMany({
-        where: {
-          userId,
-          deletedAt: null,
-        },
-        orderBy: { createdAt: "desc" },
-      });
-      return res.status(200).json(properties);
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to fetch properties" });
-  }
+function getUserId(req: Request): string {
+  return (req as any).userId;
 }
 
-export async function getProperty(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const property = await getPropertyById(req.params.id as string, userId);
-    if (!property) {
-      return res.status(404).json({ message: "Property not found" });
-    }
-    return res.status(200).json(property);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to fetch property" });
-  }
-}
-
-export async function createPropertyHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    // req.body is already validated by middleware
-    const property = await createProperty({
-      ...req.body,
-      userId: userId,
-    });
-    return res.status(201).json(property);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to create property" });
-  }
-}
-
-export async function updatePropertyHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    // req.body is already validated by middleware
-    const property = await updateProperty(
-      req.params.id as string,
-      userId,
-      req.body,
-    );
-    return res.status(200).json(property);
-  } catch (error: any) {
-    console.error(error);
-    if (error.message === "Property not found") {
-      return res.status(404).json({ message: "Property not found" });
-    }
-    return res.status(500).json({ message: "Failed to update property" });
-  }
+function createError(message: string, statusCode: number) {
+  const err = new Error(message) as any;
+  err.statusCode = statusCode;
+  return err;
 }
 
 // ============================================
-// ARCHIVE — Soft Delete
-// Only active properties (deletedAt: null) can be archived
+// GET PROPERTIES
 // ============================================
-export async function archiveProperty(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const idParam = req.params.id;
-    const id = Array.isArray(idParam) ? idParam[0] : idParam;
+export const getProperties = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { status } = req.query;
 
-    // Only active properties can be archived
-    const property = await prisma.property.findFirst({
-      where: { id, userId, deletedAt: null },
-    });
+  const where = {
+    userId,
+    ...(status === "archived"
+      ? { deletedAt: { not: null } }
+      : { deletedAt: null }),
+  };
 
-    if (!property) {
-      return res.status(404).json({ message: "Active property not found" });
-    }
+  const properties = await prisma.property.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+  });
 
-    const updated = await prisma.property.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+  return res.status(200).json(properties);
+});
 
-    return res.status(200).json({
-      message: "Property archived successfully",
-      property: updated,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to archive property" });
+// ============================================
+// GET SINGLE PROPERTY
+// ============================================
+export const getProperty = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const property = await getPropertyById(req.params.id as string, userId);
+
+  if (!property) {
+    throw createError("Property not found", 404);
   }
-}
+
+  return res.status(200).json(property);
+});
 
 // ============================================
-// RESTORE — Undo Soft Delete
-// NO deletedAt filter in query — must find archived property
-// Then validate it's actually archived before restoring
+// CREATE PROPERTY
 // ============================================
-export async function restoreProperty(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const idParam = req.params.id;
-    const id = Array.isArray(idParam) ? idParam[0] : idParam;
+export const createPropertyHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const property = await createProperty({
+    ...req.body,
+    userId: userId,
+  });
 
-    // NO deletedAt filter — find property regardless of state
-    const property = await prisma.property.findFirst({
-      where: { id, userId },
-    });
-
-    if (!property) {
-      return res.status(404).json({ message: "Property not found" });
+  await createAuditLog(
+    userId,
+    "CREATE_PROPERTY",
+    "Property",
+    property.id,
+    {
+      name: property.name,
+      address: property.address,
+      unitCount: property.unitCount,
     }
+  );
 
-    // Verify it's actually archived
-    if (!property.deletedAt) {
-      return res.status(400).json({ message: "Property is not archived" });
-    }
+  return res.status(201).json(property);
+});
 
-    const restored = await prisma.property.update({
-      where: { id },
-      data: { deletedAt: null },
-    });
+// ============================================
+// UPDATE PROPERTY
+// ============================================
+export const updatePropertyHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const propertyId = req.params.id as string;
 
-    return res.status(200).json({
-      message: "Property restored successfully",
-      property: restored,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to restore property" });
+  const existingProperty = await getPropertyById(propertyId, userId);
+
+  if (!existingProperty) {
+    throw createError("Property not found", 404);
   }
-}
 
-// ❌ Hard delete endpoint removed — per soft delete architecture
-// Use archiveProperty instead
+  const property = await updateProperty(propertyId, userId, req.body);
+
+  await createAuditLog(
+    userId,
+    "UPDATE_PROPERTY",
+    "Property",
+    property.id,
+    {
+      updatedFields: Object.keys(req.body),
+      previousData: {
+        name: existingProperty.name,
+        address: existingProperty.address,
+        unitCount: existingProperty.unitCount,
+      },
+      newData: {
+        name: property.name,
+        address: property.address,
+        unitCount: property.unitCount,
+      },
+    }
+  );
+
+  return res.status(200).json(property);
+});
+
+// ============================================
+// ARCHIVE PROPERTY
+// ============================================
+export const archiveProperty = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const idParam = req.params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+  const property = await prisma.property.findFirst({
+    where: { id, userId, deletedAt: null },
+  });
+
+  if (!property) {
+    throw createError("Active property not found", 404);
+  }
+
+  const updated = await prisma.property.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+
+  await createAuditLog(
+    userId,
+    "ARCHIVE_PROPERTY",
+    "Property",
+    id,
+    {
+      name: property.name,
+      address: property.address,
+      unitCount: property.unitCount,
+      archivedAt: new Date().toISOString(),
+    }
+  );
+
+  return res.status(200).json({
+    message: "Property archived successfully",
+    property: updated,
+  });
+});
+
+// ============================================
+// RESTORE PROPERTY
+// ============================================
+export const restoreProperty = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const idParam = req.params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+  const property = await prisma.property.findFirst({
+    where: { id, userId },
+  });
+
+  if (!property) {
+    throw createError("Property not found", 404);
+  }
+
+  if (!property.deletedAt) {
+    throw createError("Property is not archived", 400);
+  }
+
+  const restored = await prisma.property.update({
+    where: { id },
+    data: { deletedAt: null },
+  });
+
+  await createAuditLog(
+    userId,
+    "RESTORE_PROPERTY",
+    "Property",
+    id,
+    {
+      name: property.name,
+      address: property.address,
+      unitCount: property.unitCount,
+      restoredAt: new Date().toISOString(),
+    }
+  );
+
+  return res.status(200).json({
+    message: "Property restored successfully",
+    property: restored,
+  });
+});
+
+// ============================================
+// DELETE PROPERTY (Soft Delete)
+// ============================================
+export const deletePropertyHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const idParam = req.params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : String(idParam);
+
+  const property = await getPropertyById(id, userId);
+
+  if (!property) {
+    throw createError("Property not found", 404);
+  }
+
+  await deleteProperty(id, userId);
+
+  await createAuditLog(
+    userId,
+    "DELETE_PROPERTY",
+    "Property",
+    id,
+    {
+      name: property.name,
+      address: property.address,
+      unitCount: property.unitCount,
+      deletedAt: new Date().toISOString(),
+    }
+  );
+
+  return res.status(204).send();
+});

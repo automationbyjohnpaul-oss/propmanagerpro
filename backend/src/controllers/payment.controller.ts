@@ -7,140 +7,102 @@ import {
   updatePayment,
 } from "../services/payment.service";
 import { prisma } from "../lib/prisma";
+import { createAuditLog } from "../services/audit.service";
+import { asyncHandler } from "../middleware/asyncHandler";
 
-export async function getPayments(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const payments = await getAllPayments(userId);
-    res.status(200).json(payments);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to fetch payments" });
-  }
+// ============================================
+// HELPERS
+// ============================================
+
+function getUserId(req: Request): string {
+  return (req as any).userId;
 }
 
-export async function getPayment(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const payment = await getPaymentById(req.params.id as string, userId);
-
-    if (!payment) {
-      return res.status(404).json({ message: "Payment not found" });
-    }
-
-    return res.status(200).json(payment);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to fetch payment" });
-  }
+function createError(message: string, statusCode: number) {
+  const err = new Error(message) as any;
+  err.statusCode = statusCode;
+  return err;
 }
 
-export async function createPaymentHandler(req: Request, res: Response) {
-  try {
-    const { body } = req;
-    // req.body is already validated by middleware
+// ============================================
+// GET PAYMENTS
+// ============================================
+export const getPayments = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const payments = await getAllPayments(userId);
+  return res.status(200).json(payments);
+});
 
-    // Rule: Lease must exist
-    const lease = await prisma.lease.findUnique({
-      where: { id: body.leaseId },
+// ============================================
+// GET SINGLE PAYMENT
+// ============================================
+export const getPayment = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const payment = await getPaymentById(req.params.id as string, userId);
+
+  if (!payment) {
+    throw createError("Payment not found", 404);
+  }
+
+  return res.status(200).json(payment);
+});
+
+// ============================================
+// CREATE PAYMENT
+// ============================================
+export const createPaymentHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const payment = await createPayment(userId, req.body);
+
+    await createAuditLog(userId, "CREATE_PAYMENT", "Payment", payment.id, {
+      amount: Number(payment.amount),
+      method: payment.method,
+      status: payment.status,
+      leaseId: payment.leaseId,
+      tenantId: payment.tenantId,
+      paymentDate: payment.paymentDate,
     });
 
-    if (!lease) {
-      return res.status(404).json({ message: "Lease not found" });
-    }
-
-    // Rule: Tenant must exist
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: body.tenantId },
-    });
-
-    if (!tenant) {
-      return res.status(404).json({ message: "Tenant not found" });
-    }
-
-    // Rule: Tenant must belong to the lease
-    if (lease.tenantId !== body.tenantId) {
-      return res.status(409).json({
-        message: "Tenant does not belong to this lease",
-      });
-    }
-
-    const payment = await createPayment(body);
     return res.status(201).json(payment);
-  } catch (error: any) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to create payment" });
-  }
-}
+  },
+);
 
-export async function updatePaymentHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
+// ============================================
+// UPDATE PAYMENT
+// ============================================
+export const updatePaymentHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
     const paymentId = req.params.id as string;
-    const { body } = req;
-    // req.body is already validated by middleware
 
-    // If leaseId or tenantId are being changed, validate ownership
-    if (body.leaseId || body.tenantId) {
-      const leaseId = body.leaseId;
-      const tenantId = body.tenantId;
+    // Get existing payment for audit
+    const existingPayment = await getPaymentById(paymentId, userId);
 
-      if (leaseId && tenantId) {
-        // Both provided — validate full relationship
-        const lease = await prisma.lease.findUnique({
-          where: { id: leaseId },
-        });
-
-        if (!lease) {
-          return res.status(404).json({ message: "Lease not found" });
-        }
-
-        const tenant = await prisma.tenant.findUnique({
-          where: { id: tenantId },
-        });
-
-        if (!tenant) {
-          return res.status(404).json({ message: "Tenant not found" });
-        }
-
-        if (lease.tenantId !== tenantId) {
-          return res.status(409).json({
-            message: "Tenant does not belong to this lease",
-          });
-        }
-      } else if (leaseId) {
-        // Only leaseId changed — validate it exists
-        const lease = await prisma.lease.findUnique({
-          where: { id: leaseId },
-        });
-
-        if (!lease) {
-          return res.status(404).json({ message: "Lease not found" });
-        }
-      } else if (tenantId) {
-        // Only tenantId changed — validate it exists
-        const tenant = await prisma.tenant.findUnique({
-          where: { id: tenantId },
-        });
-
-        if (!tenant) {
-          return res.status(404).json({ message: "Tenant not found" });
-        }
-      }
+    if (!existingPayment) {
+      throw createError("Payment not found", 404);
     }
 
-    const payment = await updatePayment(paymentId, userId, body);
+    const payment = await updatePayment(paymentId, userId, req.body);
+
+    await createAuditLog(userId, "UPDATE_PAYMENT", "Payment", payment.id, {
+      updatedFields: Object.keys(req.body),
+      previousData: {
+        amount: Number(existingPayment.amount),
+        method: existingPayment.method,
+        status: existingPayment.status,
+        leaseId: existingPayment.leaseId,
+        tenantId: existingPayment.tenantId,
+      },
+      newData: {
+        amount: Number(payment.amount),
+        method: payment.method,
+        status: payment.status,
+        leaseId: payment.leaseId,
+        tenantId: payment.tenantId,
+      },
+    });
+
     return res.status(200).json(payment);
-  } catch (error: any) {
-    console.error(error);
-
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
-      return res.status(404).json({ message: "Payment not found" });
-    }
-
-    return res.status(500).json({ message: "Failed to update payment" });
-  }
-}
+  },
+);

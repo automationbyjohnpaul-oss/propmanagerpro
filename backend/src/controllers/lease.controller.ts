@@ -12,61 +12,80 @@ import {
   createLeaseSchema,
   updateLeaseSchema,
 } from "../validators/lease.validator";
+import { createAuditLog } from "../services/audit.service";
+import { asyncHandler } from "../middleware/asyncHandler";
 
-export async function getLeases(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const leases = await getAllLeases(userId);
-    res.status(200).json(leases);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to fetch leases" });
-  }
+// ============================================
+// HELPERS
+// ============================================
+
+function getUserId(req: Request): string {
+  return (req as any).userId;
 }
 
-export async function getLease(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const lease = await getLeaseById(req.params.id as string, userId);
-
-    if (!lease) {
-      return res.status(404).json({ message: "Lease not found" });
-    }
-
-    return res.status(200).json(lease);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to fetch lease" });
-  }
+function createError(message: string, statusCode: number) {
+  const err = new Error(message) as any;
+  err.statusCode = statusCode;
+  return err;
 }
 
-export async function createLeaseHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
+// ============================================
+// GET LEASES
+// ============================================
+export const getLeases = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const leases = await getAllLeases(userId);
+  return res.status(200).json(leases);
+});
+
+// ============================================
+// GET SINGLE LEASE
+// ============================================
+export const getLease = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const lease = await getLeaseById(req.params.id as string, userId);
+
+  if (!lease) {
+    throw createError("Lease not found", 404);
+  }
+
+  return res.status(200).json(lease);
+});
+
+// ============================================
+// CREATE LEASE
+// ============================================
+export const createLeaseHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+
     const validation = createLeaseSchema.safeParse(req.body);
 
     if (!validation.success) {
-      // Format errors including refine errors
       const errors = validation.error.issues.map((issue) => ({
         field: issue.path.join("."),
         message: issue.message,
       }));
 
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: errors,
-      });
+      const error = new Error("Validation failed") as any;
+      error.statusCode = 400;
+      error.errors = errors;
+      throw error;
     }
 
     const validatedData = validation.data;
 
-    // Rule 2: Property must exist
-    const property = await prisma.property.findUnique({
-      where: { id: validatedData.propertyId },
+    // Rule 2: Property must exist and belong to user (ownership check)
+    const property = await prisma.property.findFirst({
+      where: {
+        id: validatedData.propertyId,
+        userId,
+        deletedAt: null,
+      },
     });
 
     if (!property) {
-      return res.status(404).json({ message: "Property not found" });
+      throw createError("Property not found", 404);
     }
 
     // Rule 3: Unit must exist
@@ -75,7 +94,7 @@ export async function createLeaseHandler(req: Request, res: Response) {
     });
 
     if (!unit) {
-      return res.status(404).json({ message: "Unit not found" });
+      throw createError("Unit not found", 404);
     }
 
     // Rule 4: Tenant must exist
@@ -84,7 +103,7 @@ export async function createLeaseHandler(req: Request, res: Response) {
     });
 
     if (!tenant) {
-      return res.status(404).json({ message: "Tenant not found" });
+      throw createError("Tenant not found", 404);
     }
 
     // Rule 5: Prevent multiple active leases on the same unit
@@ -95,9 +114,7 @@ export async function createLeaseHandler(req: Request, res: Response) {
       );
 
       if (activeLease) {
-        return res.status(409).json({
-          message: "Unit already has an active lease",
-        });
+        throw createError("Unit already has an active lease", 409);
       }
     }
 
@@ -118,50 +135,65 @@ export async function createLeaseHandler(req: Request, res: Response) {
           : validatedData.signedAt,
     };
 
-    const lease = await createLease(leaseData);
-    return res.status(201).json(lease);
-  } catch (error: any) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to create lease" });
-  }
-}
+    // Pass userId to service for ownership verification
+    const lease = await createLease(userId, leaseData);
 
-export async function updateLeaseHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
+    await createAuditLog(userId, "CREATE_LEASE", "Lease", lease.id, {
+      propertyId: lease.propertyId,
+      unitId: lease.unitId,
+      tenantId: lease.tenantId,
+      monthlyRent: Number(lease.monthlyRent),
+      startDate: lease.startDate,
+      endDate: lease.endDate,
+      isActive: lease.isActive,
+    });
+
+    return res.status(201).json(lease);
+  },
+);
+
+// ============================================
+// UPDATE LEASE
+// ============================================
+export const updateLeaseHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
     const leaseId = req.params.id as string;
 
     const existingLease = await getLeaseById(leaseId, userId);
 
     if (!existingLease) {
-      return res.status(404).json({ message: "Lease not found" });
+      throw createError("Lease not found", 404);
     }
 
     const validation = updateLeaseSchema.safeParse(req.body);
 
     if (!validation.success) {
-      // Format errors including refine errors
       const errors = validation.error.issues.map((issue) => ({
         field: issue.path.join("."),
         message: issue.message,
       }));
 
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: errors,
-      });
+      const error = new Error("Validation failed") as any;
+      error.statusCode = 400;
+      error.errors = errors;
+      throw error;
     }
 
     const validatedData = validation.data;
 
-    // If propertyId is being updated, verify it exists
+    // If propertyId is being updated, verify it exists and belongs to user
     if (validatedData.propertyId) {
-      const property = await prisma.property.findUnique({
-        where: { id: validatedData.propertyId },
+      const property = await prisma.property.findFirst({
+        where: {
+          id: validatedData.propertyId,
+          userId,
+          deletedAt: null,
+        },
       });
 
       if (!property) {
-        return res.status(404).json({ message: "Property not found" });
+        throw createError("Property not found", 404);
       }
     }
 
@@ -172,7 +204,7 @@ export async function updateLeaseHandler(req: Request, res: Response) {
       });
 
       if (!unit) {
-        return res.status(404).json({ message: "Unit not found" });
+        throw createError("Unit not found", 404);
       }
     }
 
@@ -183,7 +215,7 @@ export async function updateLeaseHandler(req: Request, res: Response) {
       });
 
       if (!tenant) {
-        return res.status(404).json({ message: "Tenant not found" });
+        throw createError("Tenant not found", 404);
       }
     }
 
@@ -195,9 +227,7 @@ export async function updateLeaseHandler(req: Request, res: Response) {
       );
 
       if (activeLease && activeLease.id !== leaseId) {
-        return res.status(409).json({
-          message: "Unit already has an active lease",
-        });
+        throw createError("Unit already has an active lease", 409);
       }
     }
 
@@ -214,33 +244,59 @@ export async function updateLeaseHandler(req: Request, res: Response) {
     }
 
     const lease = await updateLease(leaseId, userId, updateData);
+
+    await createAuditLog(userId, "UPDATE_LEASE", "Lease", lease.id, {
+      updatedFields: Object.keys(req.body),
+      previousData: {
+        propertyId: existingLease.propertyId,
+        unitId: existingLease.unitId,
+        tenantId: existingLease.tenantId,
+        monthlyRent: Number(existingLease.monthlyRent),
+        startDate: existingLease.startDate,
+        endDate: existingLease.endDate,
+        isActive: existingLease.isActive,
+      },
+      newData: {
+        propertyId: lease.propertyId,
+        unitId: lease.unitId,
+        tenantId: lease.tenantId,
+        monthlyRent: Number(lease.monthlyRent),
+        startDate: lease.startDate,
+        endDate: lease.endDate,
+        isActive: lease.isActive,
+      },
+    });
+
     return res.status(200).json(lease);
-  } catch (error: any) {
-    console.error(error);
+  },
+);
 
-    if (error.message === "Lease not found") {
-      return res.status(404).json({ message: "Lease not found" });
-    }
-
-    return res.status(500).json({ message: "Failed to update lease" });
-  }
-}
-
-export async function deleteLeaseHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
+// ============================================
+// DELETE LEASE (Soft Delete)
+// ============================================
+export const deleteLeaseHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
     const leaseId = req.params.id as string;
 
     const existingLease = await getLeaseById(leaseId, userId);
 
     if (!existingLease) {
-      return res.status(404).json({ message: "Lease not found" });
+      throw createError("Lease not found", 404);
     }
+
+    await createAuditLog(userId, "DELETE_LEASE", "Lease", existingLease.id, {
+      propertyId: existingLease.propertyId,
+      unitId: existingLease.unitId,
+      tenantId: existingLease.tenantId,
+      monthlyRent: Number(existingLease.monthlyRent),
+      startDate: existingLease.startDate,
+      endDate: existingLease.endDate,
+      isActive: existingLease.isActive,
+      deletedAt: new Date().toISOString(),
+    });
 
     await deleteLease(leaseId, userId);
     return res.status(204).send();
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to delete lease" });
-  }
-}
+  },
+);

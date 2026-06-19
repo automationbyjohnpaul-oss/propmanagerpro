@@ -4,7 +4,7 @@ export async function getAllProperties(userId: string) {
   return prisma.property.findMany({
     where: {
       userId,
-      deletedAt: null, // 👈 Add this
+      deletedAt: null,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -15,7 +15,7 @@ export async function getPropertyById(id: string, userId: string) {
     where: {
       id,
       userId,
-      deletedAt: null, // 👈 Add this
+      deletedAt: null,
     },
     include: {
       units: { orderBy: { unitNumber: "asc" } },
@@ -76,7 +76,7 @@ export async function updateProperty(
   },
 ) {
   const property = await prisma.property.findFirst({
-    where: { id, userId },
+    where: { id, userId, deletedAt: null },
   });
 
   if (!property) {
@@ -91,14 +91,18 @@ export async function updateProperty(
 
 export async function deleteProperty(id: string, userId: string) {
   const property = await prisma.property.findFirst({
-    where: { id, userId },
+    where: { id, userId, deletedAt: null },
   });
 
   if (!property) {
     throw new Error("Property not found");
   }
 
-  return prisma.property.delete({
+  // ✅ SOFT DELETE (preserves audit history, prevents data loss)
+  return prisma.property.update({
     where: { id },
+    data: {
+      deletedAt: new Date(),
+    },
   });
 }

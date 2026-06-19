@@ -1,46 +1,40 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
-export async function getAllPayments(userId: string) {
-  return prisma.payment.findMany({
+export async function createPayment(userId: string, data: any) {
+  // 1. Verify lease ownership
+  const lease = await prisma.lease.findFirst({
     where: {
-      lease: {
-        property: { userId },
+      id: data.leaseId,
+      property: {
+        userId,
+        deletedAt: null,
       },
     },
-    orderBy: { paymentDate: "desc" },
-    include: {
-      lease: true,
-      tenant: true,
-    },
   });
-}
 
-export async function getPaymentById(id: string, userId: string) {
-  return prisma.payment.findFirst({
+  if (!lease) {
+    throw new Error("Lease not found or access denied");
+  }
+
+  // 2. Verify tenant ownership
+  const tenant = await prisma.tenant.findFirst({
     where: {
-      id,
-      lease: {
-        property: { userId },
-      },
-    },
-    include: {
-      lease: true,
-      tenant: true,
+      id: data.tenantId,
+      userId,
     },
   });
-}
 
-export async function createPayment(data: {
-  amount: number;
-  paymentDate?: string;
-  method: "cash" | "bank_transfer" | "card" | "check";
-  status: "pending" | "completed" | "failed" | "refunded";
-  reference?: string;
-  notes?: string;
-  leaseId: string;
-  tenantId: string;
-}) {
+  if (!tenant) {
+    throw new Error("Tenant not found or access denied");
+  }
+
+  // 3. Validate relationship integrity
+  if (lease.tenantId !== data.tenantId) {
+    throw new Error("Tenant does not belong to this lease");
+  }
+
+  // 4. CREATE PAYMENT
   return prisma.payment.create({
     data: {
       amount: new Prisma.Decimal(data.amount),
@@ -59,46 +53,16 @@ export async function createPayment(data: {
   });
 }
 
-export async function updatePayment(
-  id: string,
-  userId: string,
-  data: {
-    amount?: number;
-    paymentDate?: string;
-    method?: "cash" | "bank_transfer" | "card" | "check";
-    status?: "pending" | "completed" | "failed" | "refunded";
-    reference?: string;
-    notes?: string;
-    leaseId?: string;
-    tenantId?: string;
-  },
-) {
-  const payment = await prisma.payment.findFirst({
+export async function getPaymentById(id: string, userId: string) {
+  return prisma.payment.findFirst({
     where: {
       id,
       lease: {
-        property: { userId },
+        property: {
+          userId,
+          deletedAt: null,
+        },
       },
-    },
-  });
-
-  if (!payment) throw new Error("Payment not found");
-
-  return prisma.payment.update({
-    where: { id },
-    data: {
-      ...(data.amount !== undefined && {
-        amount: new Prisma.Decimal(data.amount),
-      }),
-      ...(data.paymentDate !== undefined && {
-        paymentDate: new Date(data.paymentDate),
-      }),
-      ...(data.method !== undefined && { method: data.method }),
-      ...(data.status !== undefined && { status: data.status }),
-      ...(data.reference !== undefined && { reference: data.reference }),
-      ...(data.notes !== undefined && { notes: data.notes }),
-      ...(data.leaseId !== undefined && { leaseId: data.leaseId }),
-      ...(data.tenantId !== undefined && { tenantId: data.tenantId }),
     },
     include: {
       lease: true,
@@ -107,21 +71,55 @@ export async function updatePayment(
   });
 }
 
-export async function deletePayment(id: string, userId: string) {
-  const payment = await prisma.payment.findFirst({
+export async function getAllPayments(userId: string) {
+  return prisma.payment.findMany({
+    where: {
+      lease: {
+        property: {
+          userId,
+          deletedAt: null,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      lease: true,
+      tenant: true,
+    },
+  });
+}
+
+export async function updatePayment(id: string, userId: string, data: any) {
+  // Verify ownership first
+  const existingPayment = await prisma.payment.findFirst({
     where: {
       id,
       lease: {
-        property: { userId },
+        property: {
+          userId,
+          deletedAt: null,
+        },
       },
     },
   });
 
-  if (!payment) throw new Error("Payment not found");
+  if (!existingPayment) {
+    throw new Error("Payment not found or access denied");
+  }
 
-  // NOTE: Per schema philosophy — never delete payments, void them instead.
-  // But if you must delete, this is scoped to user's properties.
-  return prisma.payment.delete({
+  return prisma.payment.update({
     where: { id },
+    data: {
+      amount: data.amount ? new Prisma.Decimal(data.amount) : undefined,
+      paymentDate: data.paymentDate ? new Date(data.paymentDate) : undefined,
+      method: data.method,
+      status: data.status,
+      reference: data.reference,
+      notes: data.notes,
+    },
+    include: {
+      lease: true,
+      tenant: true,
+    },
   });
 }

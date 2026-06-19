@@ -7,6 +7,9 @@
 // REFACTOR: Standard Prisma client generation
 // REFACTOR: Direct tenant ownership (v0.6.1)
 // ADDED: Soft delete support for Property (deletedAt)
+// ADDED: Soft delete support for Unit (deletedAt)
+// ADDED: AuditLog model for activity tracking (v0.7.0)
+// UPDATED: Optimized indexes for AuditLog (scalability)
 // ============================================
 
 generator client {
@@ -59,6 +62,7 @@ model User {
   // Relationships
   properties Property[]
   tenants   Tenant[]
+  auditLogs AuditLog[]
 
   @@map("users")
 }
@@ -103,6 +107,9 @@ model Property {
 // 
 // NOTE: isOccupied REMOVED — occupancy is
 // computed from active leases (single source of truth)
+//
+// Soft delete: deletedAt is null for active units.
+// Set to timestamp when deleted. Preserves historical lease data.
 
 model Unit {
   id          String   @id @default(cuid())
@@ -111,6 +118,7 @@ model Unit {
   bathrooms   Float
   squareFeet  Int?
   rentAmount  Decimal
+  deletedAt   DateTime?  // 👈 Soft delete field (null = active)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -205,4 +213,39 @@ model Payment {
   tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("payments")
+}
+
+// ============================================
+// 7. AUDIT LOG (Optimized for Scale)
+// ============================================
+// Tracks all user actions for security and compliance.
+// Records who did what, when, and on which entity.
+//
+// INDEX STRATEGY for millions of logs:
+// - userId + createdAt: Fast user activity queries
+// - entityType + entityId: Fast entity history
+// - action: Fast action filtering
+// - createdAt: Fast time-based queries
+
+model AuditLog {
+  id          String   @id @default(cuid())
+
+  userId      String
+  action      String   // e.g., "TENANT_CREATED", "PROPERTY_UPDATED", "UNIT_ARCHIVED"
+  entity      String   // e.g., "Property", "Unit", "Tenant", "Lease", "Payment", "Auth"
+  entityId    String
+
+  metadata    Json?    // Additional context (changes, IP, user agent, requestId, sessionId, role)
+
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // ✅ OPTIMIZED INDEXES FOR SAAS SCALE
+  @@index([userId, createdAt(sort: Desc)])  // Fast user activity feed
+  @@index([entity, entityId])                // Fast entity history
+  @@index([action])                          // Fast action filtering
+  @@index([createdAt])                       // Fast time-based cleanup
+
+  @@map("audit_logs")
 }

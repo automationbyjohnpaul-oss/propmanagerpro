@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import pinoHttp from "pino-http";
 
 import authRoutes from "./routes/auth.routes";
 import healthRoutes from "./routes/health.routes";
@@ -14,6 +15,8 @@ import financeAnalyticsRoutes from "./routes/financeAnalytics.routes";
 import { authMiddleware } from "./middleware/auth.middleware";
 import { errorMiddleware } from "./middleware/error.middleware";
 import { authLimiter } from "./middleware/rateLimit.middleware";
+import { env } from "./config/env";
+import { logger } from "./lib/logger";
 
 const app = express();
 
@@ -24,10 +27,11 @@ app.set("trust proxy", 1);
 // ENVIRONMENT VARIABLE VALIDATION
 // ============================================
 console.log("🔍 ENVIRONMENT CHECK:");
-console.log("📡 JWT_SECRET:", !!process.env.JWT_SECRET);
-console.log("📡 DATABASE_URL:", !!process.env.DATABASE_URL);
+console.log("📡 JWT_SECRET:", !!env.JWT_SECRET);
+console.log("📡 DATABASE_URL:", !!env.DATABASE_URL);
 console.log("📡 FRONTEND_URL:", process.env.FRONTEND_URL || "NOT SET");
-console.log("📡 PORT:", process.env.PORT || "NOT SET (default 4000)");
+console.log("📡 PORT:", env.PORT);
+console.log("📡 NODE_ENV:", env.NODE_ENV);
 console.log("=================================");
 
 // ============================================
@@ -54,6 +58,15 @@ app.use(
 app.use(express.json());
 
 // ============================================
+// STRUCTURED REQUEST LOGGING
+// ============================================
+app.use(
+  pinoHttp({
+    logger,
+  }),
+);
+
+// ============================================
 // PUBLIC ROUTES
 // ============================================
 
@@ -62,7 +75,7 @@ app.get("/", (_req, res) => {
   res.status(200).json({
     status: "OK",
     service: "PropManager Pro Backend",
-    env: process.env.NODE_ENV,
+    env: env.NODE_ENV,
     timestamp: new Date().toISOString(),
   });
 });

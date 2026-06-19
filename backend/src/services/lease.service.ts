@@ -5,7 +5,7 @@ export async function getAllLeases(userId: string) {
     where: {
       property: {
         userId,
-        deletedAt: null, // 👈 Add this
+        deletedAt: null,
       },
     },
     orderBy: { createdAt: "desc" },
@@ -23,7 +23,7 @@ export async function getLeaseById(id: string, userId: string) {
       id,
       property: {
         userId,
-        deletedAt: null, // 👈 Add this
+        deletedAt: null,
       },
     },
     include: {
@@ -34,28 +34,30 @@ export async function getLeaseById(id: string, userId: string) {
   });
 }
 
-export async function createLease(data: {
-  startDate: string;
-  endDate: string;
-  monthlyRent: number;
-  securityDeposit: number;
-  isActive: boolean;
-  propertyId: string;
-  unitId: string;
-  tenantId: string;
-}) {
-  // First check if the property exists and is not deleted
+export async function createLease(
+  userId: string,
+  data: {
+    startDate: string;
+    endDate: string;
+    monthlyRent: number;
+    securityDeposit: number;
+    isActive: boolean;
+    propertyId: string;
+    unitId: string;
+    tenantId: string;
+  },
+) {
+  // Verify property belongs to user and is not deleted
   const property = await prisma.property.findFirst({
     where: {
       id: data.propertyId,
+      userId,
       deletedAt: null,
     },
   });
 
   if (!property) {
-    throw new Error(
-      "Cannot create lease: Property not found or has been deleted",
-    );
+    throw new Error("Property not found or access denied");
   }
 
   return prisma.lease.create({
@@ -96,7 +98,7 @@ export async function updateLease(
       id,
       property: {
         userId,
-        deletedAt: null, // 👈 Add this
+        deletedAt: null,
       },
     },
   });
@@ -125,7 +127,7 @@ export async function deleteLease(id: string, userId: string) {
       id,
       property: {
         userId,
-        deletedAt: null, // 👈 Add this
+        deletedAt: null,
       },
     },
   });
@@ -144,7 +146,7 @@ export async function findActiveLeaseByUnit(unitId: string, userId: string) {
       isActive: true,
       property: {
         userId,
-        deletedAt: null, // 👈 Add this
+        deletedAt: null,
       },
     },
   });

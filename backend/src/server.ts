@@ -1,30 +1,34 @@
 import app from "./app";
+import { env } from "./config/env";
+import { runStartupChecks } from "./lib/startupHealth";
+import { logger } from "./lib/logger";
 
-const PORT = Number(process.env.PORT) || 4000;
+const PORT = Number(env.PORT);
 
-/**
- * IMPORTANT: Railway requires 0.0.0.0 binding
- * This allows the container to accept external requests
- */
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log("=================================");
-  console.log("🚀 PropManager Pro Backend Started");
-  console.log(`📡 Port: ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log("=================================");
-});
+async function startServer() {
+  try {
+    await runStartupChecks();
 
-/**
- * Handle startup errors
- */
-server.on("error", (err: any) => {
-  console.error("❌ Server error:", err);
-});
+    const server = app.listen(PORT, "0.0.0.0", () => {
+      logger.info("=================================");
+      logger.info("PropManager Pro Backend Started");
+      logger.info(`Port: ${PORT}`);
+      logger.info(`Environment: ${env.NODE_ENV}`);
+      logger.info("=================================");
+    });
 
-/**
- * Graceful shutdown
- */
-process.on("SIGTERM", () => {
-  console.log("🛑 SIGTERM received. Shutting down...");
-  server.close(() => process.exit(0));
-});
+    server.on("error", (err: any) => {
+      logger.error(err, "Server error");
+    });
+
+    process.on("SIGTERM", () => {
+      logger.info("SIGTERM received. Shutting down...");
+      server.close(() => process.exit(0));
+    });
+  } catch (error) {
+    logger.error(error, "Startup health checks failed");
+    process.exit(1);
+  }
+}
+
+startServer();

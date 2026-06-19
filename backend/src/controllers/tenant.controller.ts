@@ -5,94 +5,141 @@ import {
   createTenant,
   updateTenant,
   deleteTenant,
+  // hardDeleteTenant - removed (not implemented yet)
 } from "../services/tenant.service";
+import { createAuditLog } from "../services/audit.service";
+import { asyncHandler } from "../middleware/asyncHandler";
+import { prisma } from "../lib/prisma";
 
-export async function getTenants(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const tenants = await getAllTenants(userId);
-    res.status(200).json(tenants);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to fetch tenants" });
-  }
+// ============================================
+// HELPERS
+// ============================================
+
+function getUserId(req: Request): string {
+  return (req as any).userId;
 }
 
-export async function getTenant(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const tenant = await getTenantById(req.params.id as string, userId);
-
-    if (!tenant) {
-      return res.status(404).json({ message: "Tenant not found" });
-    }
-
-    return res.status(200).json(tenant);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to fetch tenant" });
-  }
+function createError(message: string, statusCode: number) {
+  const err = new Error(message) as any;
+  err.statusCode = statusCode;
+  return err;
 }
 
-export async function createTenantHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    // req.body is already validated by middleware
+// ============================================
+// GET TENANTS
+// ============================================
+export const getTenants = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const tenants = await getAllTenants(userId);
+  return res.status(200).json(tenants);
+});
+
+// ============================================
+// GET SINGLE TENANT
+// ============================================
+export const getTenant = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const tenant = await getTenantById(req.params.id as string, userId);
+
+  if (!tenant) {
+    throw createError("Tenant not found", 404);
+  }
+
+  return res.status(200).json(tenant);
+});
+
+// ============================================
+// CREATE TENANT
+// ============================================
+export const createTenantHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
     const tenant = await createTenant(req.body, userId);
+
+    await createAuditLog(userId, "CREATE_TENANT", "Tenant", tenant.id, {
+      firstName: tenant.firstName,
+      lastName: tenant.lastName,
+      email: tenant.email,
+      phone: tenant.phone,
+    });
+
     return res.status(201).json(tenant);
-  } catch (error: any) {
-    console.error(error);
+  },
+);
 
-    if (error?.code === "P2002") {
-      return res.status(409).json({
-        message: "Tenant email already exists",
-      });
-    }
+// ============================================
+// UPDATE TENANT
+// ============================================
+export const updateTenantHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const tenantId = req.params.id as string;
 
-    return res.status(500).json({ message: "Failed to create tenant" });
-  }
-}
-
-export async function updateTenantHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    // req.body is already validated by middleware
-    const tenant = await updateTenant(
-      req.params.id as string,
-      userId,
-      req.body,
-    );
-    return res.status(200).json(tenant);
-  } catch (error: any) {
-    console.error(error);
-
-    if (error?.code === "P2002") {
-      return res.status(409).json({
-        message: "Tenant email already exists",
-      });
-    }
-
-    if (error.message === "Tenant not found") {
-      return res.status(404).json({ message: "Tenant not found" });
-    }
-
-    return res.status(500).json({ message: "Failed to update tenant" });
-  }
-}
-
-export async function deleteTenantHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const existingTenant = await getTenantById(req.params.id as string, userId);
+    const existingTenant = await getTenantById(tenantId, userId);
 
     if (!existingTenant) {
-      return res.status(404).json({ message: "Tenant not found" });
+      throw createError("Tenant not found", 404);
     }
 
-    await deleteTenant(req.params.id as string, userId);
+    const tenant = await updateTenant(tenantId, userId, req.body);
+
+    await createAuditLog(userId, "UPDATE_TENANT", "Tenant", tenant.id, {
+      updatedFields: Object.keys(req.body),
+      previousData: {
+        firstName: existingTenant.firstName,
+        lastName: existingTenant.lastName,
+        email: existingTenant.email,
+        phone: existingTenant.phone,
+      },
+      newData: {
+        firstName: tenant.firstName,
+        lastName: tenant.lastName,
+        email: tenant.email,
+        phone: tenant.phone,
+      },
+    });
+
+    return res.status(200).json(tenant);
+  },
+);
+
+// ============================================
+// DELETE TENANT (Soft Delete)
+// ============================================
+export const deleteTenantHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const tenantId = req.params.id as string;
+
+    const existingTenant = await getTenantById(tenantId, userId);
+
+    if (!existingTenant) {
+      throw createError("Tenant not found", 404);
+    }
+
+    // Check if tenant has active leases
+    const activeLease = await prisma.lease.findFirst({
+      where: {
+        tenantId: tenantId,
+        isActive: true,
+        endDate: { gt: new Date() },
+      },
+    });
+
+    if (activeLease) {
+      throw createError("Cannot delete tenant with active lease", 409);
+    }
+
+    await deleteTenant(tenantId, userId);
+
+    await createAuditLog(userId, "DELETE_TENANT", "Tenant", existingTenant.id, {
+      firstName: existingTenant.firstName,
+      lastName: existingTenant.lastName,
+      email: existingTenant.email,
+      phone: existingTenant.phone,
+      deletedAt: new Date().toISOString(),
+    });
+
     return res.status(204).send();
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to delete tenant" });
-  }
-}
+  },
+);

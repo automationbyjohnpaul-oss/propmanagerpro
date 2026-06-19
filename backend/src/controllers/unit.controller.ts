@@ -5,152 +5,233 @@ import {
   createUnit,
   updateUnit,
   deleteUnit,
+  restoreUnit,
 } from "../services/unit.service";
 import { prisma } from "../lib/prisma";
+import { createAuditLog } from "../services/audit.service";
+import { asyncHandler } from "../middleware/asyncHandler";
 
-// ✅ UPDATED: getUnits now REQUIRES propertyId query parameter
-export async function getUnits(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const { propertyId } = req.query;
+// ============================================
+// HELPERS
+// ============================================
 
-    // STRICT: propertyId is REQUIRED
-    if (!propertyId || typeof propertyId !== "string") {
-      return res.status(400).json({
-        message: "propertyId query parameter is required",
-      });
-    }
-
-    // Verify property belongs to user
-    const property = await prisma.property.findFirst({
-      where: { id: propertyId, userId },
-    });
-
-    if (!property) {
-      return res.status(404).json({ message: "Property not found" });
-    }
-
-    const units = await prisma.unit.findMany({
-      where: { propertyId },
-      orderBy: { unitNumber: "asc" },
-    });
-
-    res.status(200).json(units);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to fetch units" });
-  }
+function getUserId(req: Request): string {
+  return (req as any).userId;
 }
 
-export async function getUnit(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    const unit = await getUnitById(req.params.id as string, userId);
-
-    if (!unit) {
-      return res.status(404).json({ message: "Unit not found" });
-    }
-
-    return res.status(200).json(unit);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to fetch unit" });
-  }
+function createError(message: string, statusCode: number) {
+  const err = new Error(message) as any;
+  err.statusCode = statusCode;
+  return err;
 }
 
-export async function createUnitHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
-    // req.body is already validated by middleware
-    const { propertyId } = req.body;
+// ============================================
+// GET UNITS
+// ============================================
+export const getUnits = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { propertyId, status } = req.query;
 
-    const property = await prisma.property.findUnique({
-      where: { id: propertyId },
+  if (!propertyId || typeof propertyId !== "string") {
+    throw createError("propertyId query parameter is required", 400);
+  }
+
+  const property = await prisma.property.findFirst({
+    where: {
+      id: propertyId,
+      userId,
+      deletedAt: null,
+    },
+  });
+
+  if (!property) {
+    throw createError("Property not found", 404);
+  }
+
+  const unitStatus = status === "archived" ? "archived" : "active";
+  const units = await getAllUnits(userId, unitStatus, propertyId);
+
+  return res.status(200).json(units);
+});
+
+// ============================================
+// GET SINGLE UNIT
+// ============================================
+export const getUnit = asyncHandler(async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const unit = await getUnitById(req.params.id as string, userId);
+
+  if (!unit) {
+    throw createError("Unit not found", 404);
+  }
+
+  return res.status(200).json(unit);
+});
+
+// ============================================
+// CREATE UNIT
+// ============================================
+export const createUnitHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const unit = await createUnit(userId, req.body);
+
+    await createAuditLog(userId, "CREATE_UNIT", "Unit", unit.id, {
+      unitNumber: unit.unitNumber,
+      propertyId: unit.propertyId,
+      bedrooms: unit.bedrooms,
+      bathrooms: unit.bathrooms,
+      rentAmount: Number(unit.rentAmount),
+      squareFeet: unit.squareFeet,
     });
 
-    if (!property) {
-      return res.status(404).json({ message: "Property not found" });
-    }
-
-    // Verify the property belongs to the authenticated user
-    if (property.userId !== userId) {
-      return res.status(403).json({ message: "You don't own this property" });
-    }
-
-    const unit = await createUnit(req.body);
     return res.status(201).json(unit);
-  } catch (error: any) {
-    console.error(error);
+  },
+);
 
-    if (error?.code === "P2002") {
-      return res.status(409).json({
-        message: "A unit with this number already exists in this property",
-      });
-    }
-
-    return res.status(500).json({ message: "Failed to create unit" });
-  }
-}
-
-export async function updateUnitHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
+// ============================================
+// UPDATE UNIT
+// ============================================
+export const updateUnitHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
     const unitId = req.params.id as string;
 
     const existingUnit = await getUnitById(unitId, userId);
 
     if (!existingUnit) {
-      return res.status(404).json({ message: "Unit not found" });
-    }
-
-    // req.body is already validated by middleware
-    const { propertyId } = req.body;
-
-    const property = await prisma.property.findUnique({
-      where: { id: propertyId },
-    });
-
-    if (!property) {
-      return res.status(404).json({ message: "Property not found" });
-    }
-
-    // Verify the property belongs to the authenticated user
-    if (property.userId !== userId) {
-      return res.status(403).json({ message: "You don't own this property" });
+      throw createError("Unit not found", 404);
     }
 
     const unit = await updateUnit(unitId, userId, req.body);
+
+    await createAuditLog(userId, "UPDATE_UNIT", "Unit", unit.id, {
+      updatedFields: Object.keys(req.body),
+      previousData: {
+        unitNumber: existingUnit.unitNumber,
+        bedrooms: existingUnit.bedrooms,
+        bathrooms: existingUnit.bathrooms,
+        rentAmount: Number(existingUnit.rentAmount),
+        squareFeet: existingUnit.squareFeet,
+      },
+      newData: {
+        unitNumber: unit.unitNumber,
+        bedrooms: unit.bedrooms,
+        bathrooms: unit.bathrooms,
+        rentAmount: Number(unit.rentAmount),
+        squareFeet: unit.squareFeet,
+      },
+    });
+
     return res.status(200).json(unit);
-  } catch (error: any) {
-    console.error(error);
+  },
+);
 
-    if (error?.code === "P2002") {
-      return res.status(409).json({
-        message: "A unit with this number already exists in this property",
-      });
-    }
-
-    return res.status(500).json({ message: "Failed to update unit" });
-  }
-}
-
-export async function deleteUnitHandler(req: Request, res: Response) {
-  try {
-    const userId = (req as any).userId!;
+// ============================================
+// ARCHIVE UNIT (Soft Delete)
+// ============================================
+export const archiveUnitHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
     const unitId = req.params.id as string;
 
     const existingUnit = await getUnitById(unitId, userId);
 
     if (!existingUnit) {
-      return res.status(404).json({ message: "Unit not found" });
+      throw createError("Unit not found", 404);
+    }
+
+    const activeLease = await prisma.lease.findFirst({
+      where: {
+        unitId: unitId,
+        isActive: true,
+        endDate: { gt: new Date() },
+      },
+    });
+
+    if (activeLease) {
+      throw createError("Cannot archive unit with active lease", 409);
     }
 
     await deleteUnit(unitId, userId);
-    return res.status(204).send();
-  } catch (error: any) {
-    console.error(error);
-    return res.status(500).json({ message: "Failed to delete unit" });
-  }
-}
 
-// ✅ REMOVED: generateUnits function (no longer needed)
+    await createAuditLog(userId, "ARCHIVE_UNIT", "Unit", unitId, {
+      unitNumber: existingUnit.unitNumber,
+      propertyId: existingUnit.propertyId,
+      bedrooms: existingUnit.bedrooms,
+      bathrooms: existingUnit.bathrooms,
+      rentAmount: Number(existingUnit.rentAmount),
+      archivedAt: new Date().toISOString(),
+    });
+
+    return res.status(204).send();
+  },
+);
+
+// ============================================
+// RESTORE UNIT
+// ============================================
+export const restoreUnitHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const idParam = req.params.id;
+    const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+    const restored = await restoreUnit(id, userId);
+
+    await createAuditLog(userId, "RESTORE_UNIT", "Unit", restored.id, {
+      unitNumber: restored.unitNumber,
+      propertyId: restored.propertyId,
+      bedrooms: restored.bedrooms,
+      bathrooms: restored.bathrooms,
+      rentAmount: Number(restored.rentAmount),
+      restoredAt: new Date().toISOString(),
+    });
+
+    return res.status(200).json({
+      message: "Unit restored successfully",
+      unit: restored,
+    });
+  },
+);
+
+// ============================================
+// DELETE UNIT (Hard Delete - Use with caution)
+// ============================================
+export const deleteUnitHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const unitId = req.params.id as string;
+
+    const existingUnit = await getUnitById(unitId, userId);
+
+    if (!existingUnit) {
+      throw createError("Unit not found", 404);
+    }
+
+    const leaseCount = await prisma.lease.count({
+      where: { unitId: unitId },
+    });
+
+    if (leaseCount > 0) {
+      throw createError(
+        "Cannot delete unit with lease history. Archive it instead.",
+        409,
+      );
+    }
+
+    await deleteUnit(unitId, userId);
+
+    await createAuditLog(userId, "DELETE_UNIT", "Unit", unitId, {
+      unitNumber: existingUnit.unitNumber,
+      propertyId: existingUnit.propertyId,
+      bedrooms: existingUnit.bedrooms,
+      bathrooms: existingUnit.bathrooms,
+      rentAmount: Number(existingUnit.rentAmount),
+      deletedAt: new Date().toISOString(),
+      note: "Hard delete - use with caution",
+    });
+
+    return res.status(204).send();
+  },
+);

@@ -4,6 +4,7 @@ import {
   getProperty,
   createPropertyHandler,
   updatePropertyHandler,
+  deletePropertyHandler,
   archiveProperty,
   restoreProperty,
 } from "../controllers/property.controller";
@@ -28,6 +29,7 @@ router.put(
   validate(updatePropertySchema),
   asyncHandler(updatePropertyHandler),
 );
+router.delete("/:id", asyncHandler(deletePropertyHandler));
 router.patch("/:id/archive", asyncHandler(archiveProperty));
 router.patch("/:id/restore", asyncHandler(restoreProperty));
 
