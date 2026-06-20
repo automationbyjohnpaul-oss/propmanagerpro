@@ -7,6 +7,10 @@ export interface Tenant {
   email: string;
   phone?: string;
   emergencyContact?: string;
+  deletedAt?: string | null;
+  hasActiveLease?: boolean;
+  activeLeaseCount?: number;
+  leases?: { id: string; isActive: boolean; unit?: { unitNumber: string } }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -19,8 +23,9 @@ export interface CreateTenantInput {
   emergencyContact?: string;
 }
 
-export async function getTenants(): Promise<Tenant[]> {
-  return api.get("/api/tenants");
+export async function getTenants(status?: string): Promise<Tenant[]> {
+  const url = status ? `/api/tenants?status=${status}` : "/api/tenants";
+  return api.get(url);
 }
 
 export async function getTenant(id: string): Promise<Tenant> {
@@ -38,6 +43,10 @@ export async function updateTenant(
   return api.put(`/api/tenants/${id}`, data);
 }
 
-export async function deleteTenant(id: string): Promise<void> {
-  return api.delete(`/api/tenants/${id}`);
+export async function archiveTenant(id: string): Promise<void> {
+  return api.patch(`/api/tenants/${id}/archive`);
+}
+
+export async function restoreTenant(id: string): Promise<Tenant> {
+  return api.patch(`/api/tenants/${id}/restore`);
 }

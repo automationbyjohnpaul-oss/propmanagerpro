@@ -31,7 +31,9 @@ function createError(message: string, statusCode: number) {
 // ============================================
 export const getTenants = asyncHandler(async (req: Request, res: Response) => {
   const userId = getUserId(req);
-  const tenants = await getAllTenants(userId);
+  const { status } = req.query;
+  const tenantStatus = status === "archived" ? "archived" : "active";
+  const tenants = await getAllTenants(userId, tenantStatus);
   return res.status(200).json(tenants);
 });
 
