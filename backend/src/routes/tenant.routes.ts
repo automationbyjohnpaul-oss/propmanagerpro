@@ -5,6 +5,8 @@ import {
   createTenantHandler,
   updateTenantHandler,
   deleteTenantHandler,
+  archiveTenantHandler,
+  restoreTenantHandler,
 } from "../controllers/tenant.controller";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { validate } from "../middleware/validate.middleware";
@@ -27,6 +29,12 @@ router.put(
   validate(updateTenantSchema),
   asyncHandler(updateTenantHandler),
 );
+
+// ARCHIVE & RESTORE
+router.patch("/:id/archive", asyncHandler(archiveTenantHandler));
+router.patch("/:id/restore", asyncHandler(restoreTenantHandler));
+
+// DELETE (admin/maintenance only)
 router.delete("/:id", asyncHandler(deleteTenantHandler));
 
 export default router;

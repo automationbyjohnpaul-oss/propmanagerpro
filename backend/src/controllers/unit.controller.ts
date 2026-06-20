@@ -141,6 +141,7 @@ export const archiveUnitHandler = asyncHandler(
       throw createError("Unit not found", 404);
     }
 
+    // Check for active leases
     const activeLease = await prisma.lease.findFirst({
       where: {
         unitId: unitId,
@@ -153,7 +154,11 @@ export const archiveUnitHandler = asyncHandler(
       throw createError("Cannot archive unit with active lease", 409);
     }
 
-    await deleteUnit(unitId, userId);
+    // Soft delete - set deletedAt
+    await prisma.unit.update({
+      where: { id: unitId },
+      data: { deletedAt: new Date() },
+    });
 
     await createAuditLog(userId, "ARCHIVE_UNIT", "Unit", unitId, {
       unitNumber: existingUnit.unitNumber,
@@ -164,7 +169,7 @@ export const archiveUnitHandler = asyncHandler(
       archivedAt: new Date().toISOString(),
     });
 
-    return res.status(204).send();
+    return res.status(200).json({ success: true });
   },
 );
 
@@ -177,7 +182,17 @@ export const restoreUnitHandler = asyncHandler(
     const idParam = req.params.id;
     const id = Array.isArray(idParam) ? idParam[0] : idParam;
 
-    const restored = await restoreUnit(id, userId);
+    // Clear deletedAt
+    await prisma.unit.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+
+    const restored = await getUnitById(id, userId);
+
+    if (!restored) {
+      throw createError("Unit not found after restore", 500);
+    }
 
     await createAuditLog(userId, "RESTORE_UNIT", "Unit", restored.id, {
       unitNumber: restored.unitNumber,
@@ -188,10 +203,7 @@ export const restoreUnitHandler = asyncHandler(
       restoredAt: new Date().toISOString(),
     });
 
-    return res.status(200).json({
-      message: "Unit restored successfully",
-      unit: restored,
-    });
+    return res.status(200).json({ success: true, unit: restored });
   },
 );
 
@@ -232,6 +244,6 @@ export const deleteUnitHandler = asyncHandler(
       note: "Hard delete - use with caution",
     });
 
-    return res.status(204).send();
+    return res.status(200).json({ success: true });
   },
 );

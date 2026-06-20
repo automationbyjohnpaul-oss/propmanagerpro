@@ -6,6 +6,7 @@ import {
   updateUnitHandler,
   deleteUnitHandler,
   restoreUnitHandler,
+  archiveUnitHandler,
 } from "../controllers/unit.controller";
 
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -37,10 +38,13 @@ router.put("/:id", validate(updateUnitSchema), asyncHandler(updateUnitHandler));
 // SOFT DELETE SYSTEM
 // ============================================
 
-// DELETE (soft delete via deletedAt)
-router.delete("/:id", asyncHandler(deleteUnitHandler));
+// ARCHIVE unit (soft delete)
+router.patch("/:id/archive", asyncHandler(archiveUnitHandler));
 
 // RESTORE archived unit
 router.patch("/:id/restore", asyncHandler(restoreUnitHandler));
+
+// DELETE (hard delete - use with caution)
+router.delete("/:id", asyncHandler(deleteUnitHandler));
 
 export default router;

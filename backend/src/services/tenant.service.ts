@@ -82,3 +82,29 @@ export async function deleteTenant(id: string, userId: string) {
     where: { id },
   });
 }
+
+export async function archiveTenant(id: string, userId: string) {
+  const tenant = await prisma.tenant.findFirst({
+    where: { id, userId, deletedAt: null },
+  });
+
+  if (!tenant) throw new Error("Tenant not found");
+
+  return prisma.tenant.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+}
+
+export async function restoreTenant(id: string, userId: string) {
+  const tenant = await prisma.tenant.findFirst({
+    where: { id, userId, deletedAt: { not: null } },
+  });
+
+  if (!tenant) throw new Error("Tenant not found");
+
+  return prisma.tenant.update({
+    where: { id },
+    data: { deletedAt: null },
+  });
+}

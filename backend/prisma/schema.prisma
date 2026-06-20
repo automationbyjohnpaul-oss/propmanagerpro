@@ -8,6 +8,7 @@
 // REFACTOR: Direct tenant ownership (v0.6.1)
 // ADDED: Soft delete support for Property (deletedAt)
 // ADDED: Soft delete support for Unit (deletedAt)
+// ADDED: Soft delete support for Tenant (deletedAt)
 // ADDED: AuditLog model for activity tracking (v0.7.0)
 // UPDATED: Optimized indexes for AuditLog (scalability)
 // ============================================
@@ -137,6 +138,9 @@ model Unit {
 // A person who rents a unit.
 // Ownership: Direct userId (v0.6.1)
 // Email uniqueness: Per landlord (composite with userId)
+//
+// Soft delete: deletedAt is null for active tenants.
+// Set to timestamp when deleted. Preserves historical lease data.
 
 model Tenant {
   id                String   @id @default(cuid())
@@ -146,15 +150,16 @@ model Tenant {
   phone             String?
   emergencyContact  String?
   userId            String
+  deletedAt         DateTime?  // ← Soft delete field (null = active)
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  // Relationships
   leases            Lease[]
   payments          Payment[]
 
   @@unique([userId, email])
+  @@index([deletedAt])
   @@map("tenants")
 }
 
