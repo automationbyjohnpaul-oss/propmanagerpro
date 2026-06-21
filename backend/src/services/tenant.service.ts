@@ -14,7 +14,7 @@ export async function getAllTenants(userId: string, status?: string) {
     orderBy: { createdAt: "desc" },
     include: {
       leases: {
-        where: { isActive: true },
+        where: { status: "ACTIVE" },
         select: { id: true },
       },
     },
@@ -24,7 +24,7 @@ export async function getAllTenants(userId: string, status?: string) {
     ...tenant,
     hasActiveLease: tenant.leases.length > 0,
     activeLeaseCount: tenant.leases.length,
-    leases: undefined, // Remove raw leases from list response
+    leases: undefined,
   }));
 }
 
@@ -46,8 +46,8 @@ export async function getTenantById(id: string, userId: string) {
 
   return {
     ...tenant,
-    hasActiveLease: tenant.leases.some((l) => l.isActive),
-    activeLeaseCount: tenant.leases.filter((l) => l.isActive).length,
+    hasActiveLease: tenant.leases.some((l) => l.status === "ACTIVE"),
+    activeLeaseCount: tenant.leases.filter((l) => l.status === "ACTIVE").length,
   };
 }
 

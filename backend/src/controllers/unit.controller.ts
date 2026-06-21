@@ -145,7 +145,7 @@ export const archiveUnitHandler = asyncHandler(
     const activeLease = await prisma.lease.findFirst({
       where: {
         unitId: unitId,
-        isActive: true,
+        status: "ACTIVE",
         endDate: { gt: new Date() },
       },
     });

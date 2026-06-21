@@ -6,6 +6,10 @@ import {
   updateLease,
   deleteLease,
   findActiveLeaseByUnit,
+  activateLease,
+  terminateLease,
+  restoreLease,
+  endLease,
 } from "../services/lease.service";
 import { prisma } from "../lib/prisma";
 import {
@@ -107,7 +111,7 @@ export const createLeaseHandler = asyncHandler(
     }
 
     // Rule 5: Prevent multiple active leases on the same unit
-    if (validatedData.isActive) {
+    if (validatedData.status === "ACTIVE") {
       const activeLease = await findActiveLeaseByUnit(
         validatedData.unitId,
         userId,
@@ -145,7 +149,7 @@ export const createLeaseHandler = asyncHandler(
       monthlyRent: Number(lease.monthlyRent),
       startDate: lease.startDate,
       endDate: lease.endDate,
-      isActive: lease.isActive,
+      status: lease.status,
     });
 
     return res.status(201).json(lease);
@@ -220,7 +224,7 @@ export const updateLeaseHandler = asyncHandler(
     }
 
     // Rule 5: Prevent multiple active leases on the same unit
-    if (validatedData.isActive && validatedData.unitId) {
+    if (validatedData.status === "ACTIVE" && validatedData.unitId) {
       const activeLease = await findActiveLeaseByUnit(
         validatedData.unitId,
         userId,
@@ -254,7 +258,7 @@ export const updateLeaseHandler = asyncHandler(
         monthlyRent: Number(existingLease.monthlyRent),
         startDate: existingLease.startDate,
         endDate: existingLease.endDate,
-        isActive: existingLease.isActive,
+        status: existingLease.status,
       },
       newData: {
         propertyId: lease.propertyId,
@@ -263,7 +267,7 @@ export const updateLeaseHandler = asyncHandler(
         monthlyRent: Number(lease.monthlyRent),
         startDate: lease.startDate,
         endDate: lease.endDate,
-        isActive: lease.isActive,
+        status: lease.status,
       },
     });
 
@@ -292,11 +296,113 @@ export const deleteLeaseHandler = asyncHandler(
       monthlyRent: Number(existingLease.monthlyRent),
       startDate: existingLease.startDate,
       endDate: existingLease.endDate,
-      isActive: existingLease.isActive,
+      status: existingLease.status,
       deletedAt: new Date().toISOString(),
     });
 
     await deleteLease(leaseId, userId);
     return res.status(204).send();
+  },
+);
+
+// ============================================
+// ACTIVATE LEASE (PENDING → ACTIVE)
+// ============================================
+export const activateLeaseHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const leaseId = req.params.id as string;
+
+    const existingLease = await getLeaseById(leaseId, userId);
+    if (!existingLease) throw createError("Lease not found", 404);
+
+    const lease = await activateLease(leaseId, userId);
+
+    await createAuditLog(userId, "LEASE_ACTIVATED", "Lease", lease.id, {
+      previousStatus: existingLease.status,
+      newStatus: lease.status,
+      unitId: lease.unitId,
+      tenantId: lease.tenantId,
+    });
+
+    return res.status(200).json(lease);
+  },
+);
+
+// ============================================
+// TERMINATE LEASE (ACTIVE → TERMINATED)
+// ============================================
+export const terminateLeaseHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const leaseId = req.params.id as string;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== "string") {
+      throw createError("Termination reason is required", 400);
+    }
+
+    const existingLease = await getLeaseById(leaseId, userId);
+    if (!existingLease) throw createError("Lease not found", 404);
+
+    const lease = await terminateLease(leaseId, userId, reason);
+
+    await createAuditLog(userId, "LEASE_TERMINATED", "Lease", lease.id, {
+      previousStatus: existingLease.status,
+      newStatus: lease.status,
+      reason,
+      unitId: lease.unitId,
+      tenantId: lease.tenantId,
+    });
+
+    return res.status(200).json(lease);
+  },
+);
+
+// ============================================
+// RESTORE LEASE (TERMINATED → ACTIVE)
+// ============================================
+export const restoreLeaseHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const leaseId = req.params.id as string;
+
+    const existingLease = await getLeaseById(leaseId, userId);
+    if (!existingLease) throw createError("Lease not found", 404);
+
+    const lease = await restoreLease(leaseId, userId);
+
+    await createAuditLog(userId, "LEASE_RESTORED", "Lease", lease.id, {
+      previousStatus: existingLease.status,
+      newStatus: lease.status,
+      unitId: lease.unitId,
+      tenantId: lease.tenantId,
+    });
+
+    return res.status(200).json(lease);
+  },
+);
+
+// ============================================
+// END LEASE (ACTIVE → ENDED)
+// ============================================
+export const endLeaseHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const leaseId = req.params.id as string;
+
+    const existingLease = await getLeaseById(leaseId, userId);
+    if (!existingLease) throw createError("Lease not found", 404);
+
+    const lease = await endLease(leaseId, userId);
+
+    await createAuditLog(userId, "LEASE_ENDED", "Lease", lease.id, {
+      previousStatus: existingLease.status,
+      newStatus: lease.status,
+      unitId: lease.unitId,
+      tenantId: lease.tenantId,
+    });
+
+    return res.status(200).json(lease);
   },
 );

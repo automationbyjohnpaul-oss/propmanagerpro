@@ -124,7 +124,7 @@ export const deleteTenantHandler = asyncHandler(
     const activeLease = await prisma.lease.findFirst({
       where: {
         tenantId: tenantId,
-        isActive: true,
+        status: "ACTIVE",
         endDate: { gt: new Date() },
       },
     });
@@ -165,7 +165,7 @@ export const archiveTenantHandler = asyncHandler(
     const activeLease = await prisma.lease.findFirst({
       where: {
         tenantId: tenantId,
-        isActive: true,
+        status: "ACTIVE",
         endDate: { gt: new Date() },
       },
     });

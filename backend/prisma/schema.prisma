@@ -9,8 +9,10 @@
 // ADDED: Soft delete support for Property (deletedAt)
 // ADDED: Soft delete support for Unit (deletedAt)
 // ADDED: Soft delete support for Tenant (deletedAt)
+// ADDED: LeaseStatus enum with PENDING, ACTIVE, ENDED, TERMINATED
 // ADDED: AuditLog model for activity tracking (v0.7.0)
 // UPDATED: Optimized indexes for AuditLog (scalability)
+// UPDATED: Lease model with status, terminatedAt, terminationReason
 // ============================================
 
 generator client {
@@ -44,6 +46,13 @@ enum UserRole {
   LANDLORD
   MANAGER
   ADMIN
+}
+
+enum LeaseStatus {
+  PENDING
+  ACTIVE
+  ENDED
+  TERMINATED
 }
 
 // ============================================
@@ -168,29 +177,39 @@ model Tenant {
 // ============================================
 // A rental contract linking a tenant to a unit
 // within a property for a specific time period.
+//
+// Status lifecycle: PENDING -> ACTIVE -> ENDED/TERMINATED
+// - PENDING: Lease created but not yet signed/active
+// - ACTIVE: Lease is currently active (tenant occupies unit)
+// - ENDED: Lease reached its natural end date
+// - TERMINATED: Lease was ended early (eviction, mutual agreement, etc.)
 
 model Lease {
-  id              String    @id @default(cuid())
-  startDate       DateTime
-  endDate         DateTime
-  monthlyRent     Decimal
-  securityDeposit Decimal
-  isActive        Boolean   @default(true)
-  signedAt        DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String      @id @default(cuid())
+  startDate         DateTime
+  endDate           DateTime
+  monthlyRent       Decimal     @db.Decimal(10,2)
+  securityDeposit   Decimal     @db.Decimal(10,2)
+  status            LeaseStatus @default(PENDING)
+  signedAt          DateTime?
+  terminatedAt      DateTime?
+  terminationReason String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
   // Foreign keys
-  propertyId      String
-  property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  unitId          String
-  unit            Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenantId        String
-  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  propertyId        String
+  property          Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitId            String
+  unit              Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId          String
+  tenant            Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relationships
-  payments        Payment[]
+  payments          Payment[]
 
+  @@index([status])
+  @@index([unitId, status])
   @@map("leases")
 }
 

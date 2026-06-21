@@ -1,14 +1,21 @@
 import { prisma } from "../lib/prisma";
+import { LeaseStatus } from "@prisma/client";
 
 export async function getAllLeases(userId: string) {
   return prisma.lease.findMany({
-    where: {
-      property: {
-        userId,
-        deletedAt: null,
-      },
+    where: { property: { userId } },
+    include: {
+      property: true,
+      unit: true,
+      tenant: true,
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getLeaseById(id: string, userId: string) {
+  return prisma.lease.findFirst({
+    where: { id, property: { userId } },
     include: {
       property: true,
       unit: true,
@@ -17,19 +24,12 @@ export async function getAllLeases(userId: string) {
   });
 }
 
-export async function getLeaseById(id: string, userId: string) {
+export async function findActiveLeaseByUnit(unitId: string, userId: string) {
   return prisma.lease.findFirst({
     where: {
-      id,
-      property: {
-        userId,
-        deletedAt: null,
-      },
-    },
-    include: {
-      property: true,
-      unit: true,
-      tenant: true,
+      unitId,
+      status: "ACTIVE",
+      property: { userId },
     },
   });
 }
@@ -41,32 +41,21 @@ export async function createLease(
     endDate: string;
     monthlyRent: number;
     securityDeposit: number;
-    isActive: boolean;
+    status?: string;
+    signedAt?: string;
     propertyId: string;
     unitId: string;
     tenantId: string;
   },
 ) {
-  // Verify property belongs to user and is not deleted
-  const property = await prisma.property.findFirst({
-    where: {
-      id: data.propertyId,
-      userId,
-      deletedAt: null,
-    },
-  });
-
-  if (!property) {
-    throw new Error("Property not found or access denied");
-  }
-
   return prisma.lease.create({
     data: {
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
       monthlyRent: data.monthlyRent,
       securityDeposit: data.securityDeposit,
-      isActive: data.isActive,
+      status: (data.status as LeaseStatus) || "PENDING",
+      signedAt: data.signedAt ? new Date(data.signedAt) : null,
       propertyId: data.propertyId,
       unitId: data.unitId,
       tenantId: data.tenantId,
@@ -87,28 +76,17 @@ export async function updateLease(
     endDate?: string;
     monthlyRent?: number;
     securityDeposit?: number;
-    isActive?: boolean;
+    status?: string;
+    signedAt?: string;
     propertyId?: string;
     unitId?: string;
     tenantId?: string;
   },
 ) {
-  const lease = await prisma.lease.findFirst({
-    where: {
-      id,
-      property: {
-        userId,
-        deletedAt: null,
-      },
-    },
-  });
-
-  if (!lease) throw new Error("Lease not found");
-
-  // Build update data dynamically to handle optional date fields
   const updateData: any = { ...data };
   if (data.startDate) updateData.startDate = new Date(data.startDate);
   if (data.endDate) updateData.endDate = new Date(data.endDate);
+  if (data.signedAt) updateData.signedAt = new Date(data.signedAt);
 
   return prisma.lease.update({
     where: { id },
@@ -121,33 +99,118 @@ export async function updateLease(
   });
 }
 
-export async function deleteLease(id: string, userId: string) {
+// ============================================
+// STATE TRANSITION METHODS (Single Source of Truth)
+// ============================================
+
+export async function activateLease(id: string, userId: string) {
   const lease = await prisma.lease.findFirst({
-    where: {
-      id,
-      property: {
-        userId,
-        deletedAt: null,
-      },
-    },
+    where: { id, property: { userId } },
   });
 
   if (!lease) throw new Error("Lease not found");
+  if (lease.status !== "PENDING") {
+    throw new Error(`Cannot activate lease with status: ${lease.status}`);
+  }
 
-  return prisma.lease.delete({
+  // Check for conflicting active lease
+  const conflicting = await prisma.lease.findFirst({
+    where: {
+      unitId: lease.unitId,
+      status: "ACTIVE",
+      id: { not: id },
+    },
+  });
+
+  if (conflicting) {
+    throw new Error("Unit already has an active lease");
+  }
+
+  return prisma.lease.update({
     where: { id },
+    data: { status: "ACTIVE" },
+    include: { property: true, unit: true, tenant: true },
   });
 }
 
-export async function findActiveLeaseByUnit(unitId: string, userId: string) {
-  return prisma.lease.findFirst({
-    where: {
-      unitId,
-      isActive: true,
-      property: {
-        userId,
-        deletedAt: null,
-      },
+export async function terminateLease(
+  id: string,
+  userId: string,
+  reason: string,
+) {
+  const lease = await prisma.lease.findFirst({
+    where: { id, property: { userId } },
+  });
+
+  if (!lease) throw new Error("Lease not found");
+  if (lease.status !== "ACTIVE") {
+    throw new Error(`Cannot terminate lease with status: ${lease.status}`);
+  }
+
+  return prisma.lease.update({
+    where: { id },
+    data: {
+      status: "TERMINATED",
+      terminatedAt: new Date(),
+      terminationReason: reason,
     },
+    include: { property: true, unit: true, tenant: true },
+  });
+}
+
+export async function restoreLease(id: string, userId: string) {
+  const lease = await prisma.lease.findFirst({
+    where: { id, property: { userId } },
+  });
+
+  if (!lease) throw new Error("Lease not found");
+  if (lease.status !== "TERMINATED") {
+    throw new Error(`Cannot restore lease with status: ${lease.status}`);
+  }
+
+  // Check for conflicting active lease
+  const conflicting = await prisma.lease.findFirst({
+    where: {
+      unitId: lease.unitId,
+      status: "ACTIVE",
+      id: { not: id },
+    },
+  });
+
+  if (conflicting) {
+    throw new Error("Unit already has an active lease");
+  }
+
+  return prisma.lease.update({
+    where: { id },
+    data: {
+      status: "ACTIVE",
+      terminatedAt: null,
+      terminationReason: null,
+    },
+    include: { property: true, unit: true, tenant: true },
+  });
+}
+
+export async function endLease(id: string, userId: string) {
+  const lease = await prisma.lease.findFirst({
+    where: { id, property: { userId } },
+  });
+
+  if (!lease) throw new Error("Lease not found");
+  if (lease.status !== "ACTIVE") {
+    throw new Error(`Cannot end lease with status: ${lease.status}`);
+  }
+
+  return prisma.lease.update({
+    where: { id },
+    data: { status: "ENDED" },
+    include: { property: true, unit: true, tenant: true },
+  });
+}
+
+export async function deleteLease(id: string, userId: string) {
+  return prisma.lease.delete({
+    where: { id },
   });
 }

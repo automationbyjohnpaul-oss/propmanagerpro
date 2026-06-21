@@ -17,14 +17,14 @@ export async function getDashboardMetrics(userId: string) {
       }),
       prisma.lease.count({
         where: {
-          isActive: true,
+          status: "ACTIVE",
           property: { userId },
         },
       }),
       prisma.lease.groupBy({
         by: ["unitId"],
         where: {
-          isActive: true,
+          status: "ACTIVE",
           property: { userId },
         },
       }),
@@ -79,7 +79,7 @@ export async function getRevenueByProperty(userId: string) {
   return properties.map((property) => {
     const revenue = property.leases.reduce((sum, lease) => {
       const leaseRevenue = lease.payments.reduce(
-        (paymentSum, payment) => paymentSum + Number(payment.amount),
+        (paymentSum: number, payment) => paymentSum + Number(payment.amount),
         0,
       );
       return sum + leaseRevenue;
@@ -97,7 +97,7 @@ export async function getOutstandingRent(userId: string) {
   const { startOfMonth, startOfNextMonth } = getCurrentMonthRange();
 
   const leases = await prisma.lease.findMany({
-    where: { isActive: true, property: { userId } },
+    where: { status: "ACTIVE", property: { userId } },
     include: {
       tenant: true,
       unit: {
@@ -120,7 +120,7 @@ export async function getOutstandingRent(userId: string) {
   return leases
     .map((lease) => {
       const currentMonthPaid = lease.payments.reduce(
-        (sum, payment) => sum + Number(payment.amount),
+        (sum: number, payment) => sum + Number(payment.amount),
         0,
       );
       const monthlyRent = Number(lease.monthlyRent);
