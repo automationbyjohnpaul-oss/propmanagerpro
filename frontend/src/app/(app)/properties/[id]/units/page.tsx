@@ -143,7 +143,7 @@ export default function UnitsPage() {
                       Bathrooms
                     </th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
-                      Rent
+                      Market Rent
                     </th>
                     <th className="text-right px-6 py-3 text-sm font-medium text-gray-500 uppercase tracking-wide">
                       Actions

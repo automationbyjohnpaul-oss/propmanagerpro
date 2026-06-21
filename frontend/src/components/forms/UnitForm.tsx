@@ -179,7 +179,7 @@ export default function UnitForm({
           htmlFor="rentAmount"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
-          Monthly Rent *
+          Suggested Monthly Rent *
         </label>
         <input
           type="number"
