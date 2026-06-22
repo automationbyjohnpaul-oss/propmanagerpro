@@ -44,9 +44,9 @@ export async function updateTenant(
 }
 
 export async function archiveTenant(id: string): Promise<void> {
-  return api.patch(`/api/tenants/${id}/archive`);
+  return api.patch(`/api/tenants/${id}/archive`, {});
 }
 
 export async function restoreTenant(id: string): Promise<Tenant> {
-  return api.patch(`/api/tenants/${id}/restore`);
+  return api.patch(`/api/tenants/${id}/restore`, {});
 }

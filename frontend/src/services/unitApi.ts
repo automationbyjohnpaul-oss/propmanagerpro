@@ -49,11 +49,11 @@ export async function updateUnit(
 }
 
 export async function archiveUnit(id: string): Promise<void> {
-  return api.patch(`/api/units/${id}/archive`);
+  return api.patch(`/api/units/${id}/archive`, {});
 }
 
 export async function restoreUnit(id: string): Promise<Unit> {
-  return api.patch(`/api/units/${id}/restore`);
+  return api.patch(`/api/units/${id}/restore`, {});
 }
 
 export async function deleteUnit(id: string): Promise<void> {

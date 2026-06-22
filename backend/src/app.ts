@@ -14,7 +14,7 @@ import paymentRoutes from "./routes/payment.routes";
 import financeAnalyticsRoutes from "./routes/financeAnalytics.routes";
 import { authMiddleware } from "./middleware/auth.middleware";
 import { errorMiddleware } from "./middleware/error.middleware";
-import { authLimiter } from "./middleware/rateLimit.middleware";
+import { authLimiter, apiLimiter } from "./middleware/rateLimit.middleware";
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
 
@@ -55,7 +55,7 @@ app.use(
   }),
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 // ============================================
 // STRUCTURED REQUEST LOGGING
@@ -89,6 +89,7 @@ app.use("/api/auth", authLimiter, authRoutes);
 // ============================================
 // PROTECTED ROUTES
 // ============================================
+app.use("/api", apiLimiter);
 app.use("/api/properties", authMiddleware, propertyRoutes);
 app.use("/api/units", authMiddleware, unitRoutes);
 app.use("/api/tenants", authMiddleware, tenantRoutes);
