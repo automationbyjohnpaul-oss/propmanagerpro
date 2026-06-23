@@ -6,10 +6,15 @@ import { logger } from "./lib/logger";
 const PORT = Number(env.PORT);
 
 async function startServer() {
+  console.log("🔥 ENTRY FILE LOADED");
+  console.log("🔥 BEFORE STARTUP CHECKS");
+
   // Fire-and-forget startup validation (non-blocking)
   void runStartupChecks().catch((err) => {
     logger.error(err, "Startup checks failed (non-blocking)");
   });
+
+  console.log("🔥 BEFORE LISTEN");
 
   const server = app.listen(PORT, "0.0.0.0", () => {
     logger.info("=================================");
