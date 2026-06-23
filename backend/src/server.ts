@@ -1,3 +1,4 @@
+console.log("🔥 DEPLOY VERSION: 2026-06-23-v2");
 import app from "./app";
 import { env } from "./config/env";
 import { runStartupChecks } from "./lib/startupHealth";
