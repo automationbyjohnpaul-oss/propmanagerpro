@@ -13,6 +13,7 @@
 // ADDED: AuditLog model for activity tracking (v0.7.0)
 // UPDATED: Optimized indexes for AuditLog (scalability)
 // UPDATED: Lease model with status, terminatedAt, terminationReason
+// ADDED: Prisma directUrl for Supabase migrations
 // ============================================
 
 generator client {
@@ -20,8 +21,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
