@@ -47,26 +47,26 @@ PropManager Pro/
 
 ## Frontend
 
-* Next.js
-* React
-* TypeScript
-* Tailwind CSS
-* App Router
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- App Router
 
 ## Backend
 
-* Node.js
-* Express
-* TypeScript
-* Prisma
-* PostgreSQL
-* Supabase
-* JWT
-* bcrypt
-* Zod
-* Helmet
-* express-rate-limit
-* Pino
+- Node.js
+- Express
+- TypeScript
+- Prisma
+- PostgreSQL
+- Supabase
+- JWT
+- bcrypt
+- Zod
+- Helmet
+- express-rate-limit
+- Pino
 
 ## Hosting
 
@@ -188,15 +188,33 @@ Authorization must be based on the authenticated JWT identity.
 
 # Current Deployment State
 
-The backend has been deployed to Railway.
+⚪ UNVERIFIED — requires re-establishment before treating as current
 
-The backend health endpoint has been validated.
+The Railway backend previously deployed successfully and database connectivity through Railway to Supabase was validated. However, the Railway subscription has since expired.
 
-Database connectivity through Railway to Supabase has been validated.
+Current known deployment status:
 
-Authentication behavior has been validated.
+```text
+Frontend (Vercel)     → 🟡 Previously deployed — connectivity unverified
+Backend (Railway)     → 🔴 Expired — must be redeployed
+Database (Supabase)   → 🟡 Exists — production schema state unverified
+```
 
-The frontend is intended for Vercel deployment.
+Before treating the backend as available, verify:
+
+```text
+Railway redeployment
+      ↓
+/health endpoint responds
+      ↓
+Database connectivity confirmed
+      ↓
+Authentication working
+      ↓
+CRUD working
+      ↓
+Tenant isolation verified
+```
 
 For exact current deployment state, consult:
 
@@ -224,16 +242,16 @@ The next major focus is Phase 5.2 production hardening.
 
 Primary areas:
 
-* CORS
-* Rate limiting
-* Structured logging
-* Security headers
-* Authentication robustness
-* Authorization
-* Error handling
-* Reliability
-* Deployment determinism
-* Testing
+- CORS
+- Rate limiting
+- Structured logging
+- Security headers
+- Authentication robustness
+- Authorization
+- Error handling
+- Reliability
+- Deployment determinism
+- Testing
 
 ---
 
@@ -244,8 +262,8 @@ Primary areas:
 Investigate duplicate API abstraction:
 
 ```text
-lib/api-client.ts
-services/api.ts
+lib/api-client.ts     → appears unused — verify before removing
+services/api.ts       → confirmed primary API abstraction
 ```
 
 ## Backend
@@ -370,13 +388,13 @@ After making a change, determine whether the change is:
 
 Examples:
 
-* fixing a typo
-* changing a button label
-* correcting minor styling
-* refactoring internal code without changing behavior
-* improving variable names
-* removing dead code
-* fixing an isolated implementation bug with no architectural or behavioral significance
+- fixing a typo
+- changing a button label
+- correcting minor styling
+- refactoring internal code without changing behavior
+- improving variable names
+- removing dead code
+- fixing an isolated implementation bug with no architectural or behavioral significance
 
 Normally:
 
@@ -386,30 +404,30 @@ Normally:
 
 A change is material when it affects one or more of:
 
-* architecture
-* security
-* authentication
-* authorization
-* database schema
-* API contracts
-* business rules
-* deployment
-* infrastructure
-* environment variables
-* production behavior
-* financial calculations
-* data ownership / multi-tenancy
-* major frontend/backend boundaries
-* reliability
-* testing strategy
-* dependencies with architectural significance
-* user-visible functionality
-* major feature completion
-* major bug resolution
-* project phase/status
-* technical decisions
-* known risks
-* future work
+- architecture
+- security
+- authentication
+- authorization
+- database schema
+- API contracts
+- business rules
+- deployment
+- infrastructure
+- environment variables
+- production behavior
+- financial calculations
+- data ownership / multi-tenancy
+- major frontend/backend boundaries
+- reliability
+- testing strategy
+- dependencies with architectural significance
+- user-visible functionality
+- major feature completion
+- major bug resolution
+- project phase/status
+- technical decisions
+- known risks
+- future work
 
 For material changes, update the **minimum set of documents required to keep the source of truth synchronized.**
 
@@ -417,19 +435,19 @@ For material changes, update the **minimum set of documents required to keep the
 
 # Document Update Matrix
 
-| Change                               | PROJECT_STATE                 | ARCHITECTURE                       | DECISION_LOG            | CHANGELOG         | TODO                 | AI_HANDOFF                          |
-| ------------------------------------ | ----------------------------- | ---------------------------------- | ----------------------- | ----------------- | -------------------- | ----------------------------------- |
-| Minor UI fix                         | Usually no                    | No                                 | No                      | No                | No                   | No                                  |
-| Bug fix with no lasting significance | Usually no                    | No                                 | No                      | Optional          | No                   | No                                  |
-| Major bug fix                        | Yes if current state changes  | If architectural                   | If decision involved    | Yes               | If TODO affected     | If workflow changes                 |
-| New feature                          | Yes                           | If architecture affected           | If decision involved    | Yes               | If TODO affected     | Usually no                          |
-| Database schema change               | Yes                           | Yes                                | If significant decision | Yes               | If affected          | If workflow/risk changes            |
-| API contract change                  | Yes                           | Yes                                | If significant          | Yes               | If affected          | If workflow changes                 |
-| Security change                      | Yes                           | Yes if architectural               | Yes if a decision       | Yes               | If follow-up remains | Yes if procedure changes            |
-| Deployment change                    | Yes                           | Yes if architecture/infrastructure | Yes if significant      | Yes               | If follow-up remains | Yes if deployment procedure changes |
-| Major architectural refactor         | Yes                           | Yes                                | Yes                     | Yes               | Yes if affected      | Yes                                 |
-| New major engineering rule           | Yes if current state affected | Possibly                           | Yes                     | Yes if noteworthy | Possibly             | **Yes**                             |
-| Phase completion                     | Yes                           | Usually no                         | No                      | Yes               | Yes                  | Yes if handoff context changes      |
+| Change                          | PROJECT_STATE         | ARCHITECTURE             | DECISION_LOG            | CHANGELOG         | TODO                 | AI_HANDOFF                          |
+| ------------------------------- | --------------------- | ------------------------ | ----------------------- | ----------------- | -------------------- | ----------------------------------- |
+| Minor UI fix                    | Usually no            | No                       | No                      | No                | No                   | No                                  |
+| Bug fix no lasting significance | Usually no            | No                       | No                      | Optional          | No                   | No                                  |
+| Major bug fix                   | Yes if state changes  | If architectural         | If decision involved    | Yes               | If TODO affected     | If workflow changes                 |
+| New feature                     | Yes                   | If architecture affected | If decision involved    | Yes               | If TODO affected     | Usually no                          |
+| Database schema change          | Yes                   | Yes                      | If significant decision | Yes               | If affected          | If workflow/risk changes            |
+| API contract change             | Yes                   | Yes                      | If significant          | Yes               | If affected          | If workflow changes                 |
+| Security change                 | Yes                   | Yes if architectural     | Yes if a decision       | Yes               | If follow-up remains | Yes if procedure changes            |
+| Deployment change               | Yes                   | Yes if arch/infra        | Yes if significant      | Yes               | If follow-up remains | Yes if deployment procedure changes |
+| Major architectural refactor    | Yes                   | Yes                      | Yes                     | Yes               | Yes if affected      | Yes                                 |
+| New major engineering rule      | Yes if state affected | Possibly                 | Yes                     | Yes if noteworthy | Possibly             | **Yes**                             |
+| Phase completion                | Yes                   | Usually no               | No                      | Yes               | Yes                  | Yes if handoff context changes      |
 
 ---
 
@@ -470,8 +488,8 @@ Never preserve incorrect documentation simply because it was written earlier.
 
 At the beginning of a new AI session:
 
-1. Read `AI_HANDOFF.md`.
-2. Read `PROJECT_STATE.md`.
+1. Read `AI_HANDOFF.md` to understand the operating rules and continuation protocol.
+2. Read `PROJECT_STATE.md` to establish the current project truth.
 3. Read `ARCHITECTURE.md` when architectural context is needed.
 4. Read relevant sections of `DECISION_LOG.md`.
 5. Read relevant recent entries in `CHANGELOG.md`.
