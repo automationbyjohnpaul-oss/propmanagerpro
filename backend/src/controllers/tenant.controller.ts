@@ -107,7 +107,7 @@ export const updateTenantHandler = asyncHandler(
 );
 
 // ============================================
-// DELETE TENANT (Soft Delete)
+// DELETE TENANT (Hard Delete - Use with caution)
 // ============================================
 export const deleteTenantHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -120,22 +120,9 @@ export const deleteTenantHandler = asyncHandler(
       throw createError("Tenant not found", 404);
     }
 
-    // Check if tenant has active leases
-    const activeLease = await prisma.lease.findFirst({
-      where: {
-        tenantId: tenantId,
-        status: "ACTIVE",
-        endDate: { gt: new Date() },
-      },
-    });
-
-    if (activeLease) {
-      throw createError("Cannot delete tenant with active lease", 409);
-    }
-
     await deleteTenant(tenantId, userId);
 
-    await createAuditLog(userId, "DELETE_TENANT", "Tenant", existingTenant.id, {
+    await createAuditLog(userId, "DELETE_TENANT", "Tenant", tenantId, {
       firstName: existingTenant.firstName,
       lastName: existingTenant.lastName,
       email: existingTenant.email,
@@ -161,10 +148,9 @@ export const archiveTenantHandler = asyncHandler(
       throw createError("Tenant not found", 404);
     }
 
-    // Check for active leases
     const activeLease = await prisma.lease.findFirst({
       where: {
-        tenantId: tenantId,
+        tenantId,
         status: "ACTIVE",
         endDate: { gt: new Date() },
       },
@@ -177,10 +163,7 @@ export const archiveTenantHandler = asyncHandler(
       );
     }
 
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { deletedAt: new Date() },
-    });
+    await archiveTenant(tenantId, userId);
 
     await createAuditLog(userId, "ARCHIVE_TENANT", "Tenant", tenantId, {
       firstName: existingTenant.firstName,
@@ -202,29 +185,19 @@ export const restoreTenantHandler = asyncHandler(
     const userId = getUserId(req);
     const tenantId = req.params.id as string;
 
-    const tenant = await prisma.tenant.findFirst({
-      where: { id: tenantId, userId, deletedAt: { not: null } },
-    });
-
-    if (!tenant) {
-      throw createError("Archived tenant not found", 404);
-    }
-
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { deletedAt: null },
-    });
-
-    const restored = await getTenantById(tenantId, userId);
+    const restored = await restoreTenant(tenantId, userId);
 
     await createAuditLog(userId, "RESTORE_TENANT", "Tenant", tenantId, {
-      firstName: tenant.firstName,
-      lastName: tenant.lastName,
-      email: tenant.email,
-      phone: tenant.phone,
+      firstName: restored.firstName,
+      lastName: restored.lastName,
+      email: restored.email,
+      phone: restored.phone,
       restoredAt: new Date().toISOString(),
     });
 
-    return res.status(200).json({ success: true, tenant: restored });
+    return res.status(200).json({
+      success: true,
+      tenant: restored,
+    });
   },
 );

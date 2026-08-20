@@ -120,10 +120,26 @@ export async function restoreTenant(id: string, userId: string) {
 
 export async function deleteTenant(id: string, userId: string) {
   const tenant = await prisma.tenant.findFirst({
-    where: { id, userId },
+    where: {
+      id,
+      userId,
+    },
   });
 
-  if (!tenant) throw new Error("Tenant not found");
+  if (!tenant) {
+    throw new Error("Tenant not found");
+  }
+
+  // NEVER hard-delete a tenant with lease history.
+  const leaseCount = await prisma.lease.count({
+    where: { tenantId: id },
+  });
+
+  if (leaseCount > 0) {
+    throw new Error(
+      "Cannot delete tenant with lease history. Archive the tenant instead.",
+    );
+  }
 
   return prisma.tenant.delete({
     where: { id },

@@ -1,3 +1,4 @@
+// frontend/src/services/paymentApi.ts
 import { api } from "./api";
 
 export interface Payment {
@@ -31,11 +32,9 @@ export interface UpdatePaymentInput {
   amount?: number;
   paymentDate?: string;
   method?: "cash" | "bank_transfer" | "card" | "check";
-  status?: "pending" | "completed" | "failed" | "refunded";
   reference?: string;
   notes?: string;
-  leaseId?: string;
-  tenantId?: string;
+  // Status, leaseId, tenantId are intentionally excluded - they are immutable
 }
 
 export async function getPayments(): Promise<Payment[]> {
@@ -58,3 +57,5 @@ export async function updatePayment(
 ): Promise<Payment> {
   return api.put(`/api/payments/${id}`, data);
 }
+
+// REMOVED: deletePayment - payments should never be deleted

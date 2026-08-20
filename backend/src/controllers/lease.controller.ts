@@ -11,7 +11,6 @@ import {
   restoreLease,
   endLease,
 } from "../services/lease.service";
-import { prisma } from "../lib/prisma";
 import {
   createLeaseSchema,
   updateLeaseSchema,
@@ -79,49 +78,6 @@ export const createLeaseHandler = asyncHandler(
 
     const validatedData = validation.data;
 
-    // Rule 2: Property must exist and belong to user (ownership check)
-    const property = await prisma.property.findFirst({
-      where: {
-        id: validatedData.propertyId,
-        userId,
-        deletedAt: null,
-      },
-    });
-
-    if (!property) {
-      throw createError("Property not found", 404);
-    }
-
-    // Rule 3: Unit must exist
-    const unit = await prisma.unit.findUnique({
-      where: { id: validatedData.unitId },
-    });
-
-    if (!unit) {
-      throw createError("Unit not found", 404);
-    }
-
-    // Rule 4: Tenant must exist
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: validatedData.tenantId },
-    });
-
-    if (!tenant) {
-      throw createError("Tenant not found", 404);
-    }
-
-    // Rule 5: Prevent multiple active leases on the same unit
-    if (validatedData.status === "ACTIVE") {
-      const activeLease = await findActiveLeaseByUnit(
-        validatedData.unitId,
-        userId,
-      );
-
-      if (activeLease) {
-        throw createError("Unit already has an active lease", 409);
-      }
-    }
-
     // Convert Date objects to ISO strings for Prisma
     const leaseData = {
       ...validatedData,
@@ -139,7 +95,7 @@ export const createLeaseHandler = asyncHandler(
           : validatedData.signedAt,
     };
 
-    // Pass userId to service for ownership verification
+    // Service handles all ownership and business rule checks
     const lease = await createLease(userId, leaseData);
 
     await createAuditLog(userId, "CREATE_LEASE", "Lease", lease.id, {
@@ -186,55 +142,6 @@ export const updateLeaseHandler = asyncHandler(
 
     const validatedData = validation.data;
 
-    // If propertyId is being updated, verify it exists and belongs to user
-    if (validatedData.propertyId) {
-      const property = await prisma.property.findFirst({
-        where: {
-          id: validatedData.propertyId,
-          userId,
-          deletedAt: null,
-        },
-      });
-
-      if (!property) {
-        throw createError("Property not found", 404);
-      }
-    }
-
-    // If unitId is being updated, verify it exists
-    if (validatedData.unitId) {
-      const unit = await prisma.unit.findUnique({
-        where: { id: validatedData.unitId },
-      });
-
-      if (!unit) {
-        throw createError("Unit not found", 404);
-      }
-    }
-
-    // If tenantId is being updated, verify it exists
-    if (validatedData.tenantId) {
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: validatedData.tenantId },
-      });
-
-      if (!tenant) {
-        throw createError("Tenant not found", 404);
-      }
-    }
-
-    // Rule 5: Prevent multiple active leases on the same unit
-    if (validatedData.status === "ACTIVE" && validatedData.unitId) {
-      const activeLease = await findActiveLeaseByUnit(
-        validatedData.unitId,
-        userId,
-      );
-
-      if (activeLease && activeLease.id !== leaseId) {
-        throw createError("Unit already has an active lease", 409);
-      }
-    }
-
     // Convert Date objects to ISO strings for Prisma
     const updateData: any = { ...validatedData };
     if (validatedData.startDate instanceof Date) {
@@ -247,6 +154,7 @@ export const updateLeaseHandler = asyncHandler(
       updateData.signedAt = validatedData.signedAt.toISOString();
     }
 
+    // Service handles all ownership and business rule checks
     const lease = await updateLease(leaseId, userId, updateData);
 
     await createAuditLog(userId, "UPDATE_LEASE", "Lease", lease.id, {
@@ -276,7 +184,7 @@ export const updateLeaseHandler = asyncHandler(
 );
 
 // ============================================
-// DELETE LEASE (Soft Delete)
+// DELETE LEASE
 // ============================================
 export const deleteLeaseHandler = asyncHandler(
   async (req: Request, res: Response) => {

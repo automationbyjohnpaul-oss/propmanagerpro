@@ -1,12 +1,11 @@
+// backend/src/controllers/payment.controller.ts
 import { Request, Response } from "express";
-import { Prisma } from "@prisma/client";
 import {
   getAllPayments,
   getPaymentById,
   createPayment,
   updatePayment,
 } from "../services/payment.service";
-import { prisma } from "../lib/prisma";
 import { createAuditLog } from "../services/audit.service";
 import { asyncHandler } from "../middleware/asyncHandler";
 
@@ -83,26 +82,39 @@ export const updatePaymentHandler = asyncHandler(
       throw createError("Payment not found", 404);
     }
 
+    // Store previous state for audit
+    const previousState = {
+      amount: Number(existingPayment.amount),
+      method: existingPayment.method,
+      status: existingPayment.status,
+      leaseId: existingPayment.leaseId,
+      tenantId: existingPayment.tenantId,
+      paymentDate: existingPayment.paymentDate,
+      reference: existingPayment.reference,
+      notes: existingPayment.notes,
+    };
+
+    // Service will enforce all business rules
     const payment = await updatePayment(paymentId, userId, req.body);
 
+    // Only log if update was successful
     await createAuditLog(userId, "UPDATE_PAYMENT", "Payment", payment.id, {
       updatedFields: Object.keys(req.body),
-      previousData: {
-        amount: Number(existingPayment.amount),
-        method: existingPayment.method,
-        status: existingPayment.status,
-        leaseId: existingPayment.leaseId,
-        tenantId: existingPayment.tenantId,
-      },
+      previousData: previousState,
       newData: {
         amount: Number(payment.amount),
         method: payment.method,
         status: payment.status,
         leaseId: payment.leaseId,
         tenantId: payment.tenantId,
+        paymentDate: payment.paymentDate,
+        reference: payment.reference,
+        notes: payment.notes,
       },
     });
 
     return res.status(200).json(payment);
   },
 );
+
+// REMOVED: deletePaymentHandler - payments should never be deleted

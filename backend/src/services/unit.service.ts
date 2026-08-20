@@ -49,11 +49,7 @@ export async function getUnitById(id: string, userId: string) {
 // ============================================
 // CREATE UNIT (with transaction support)
 // ============================================
-export async function createUnit(
-  userId: string,
-  data: any,
-  tx?: any, // 👈 Added transaction support
-) {
+export async function createUnit(userId: string, data: any, tx?: any) {
   const client = tx || prisma;
 
   const property = await client.property.findFirst({
@@ -83,7 +79,7 @@ export async function updateUnit(
   id: string,
   userId: string,
   data: any,
-  tx?: any, // 👈 Added transaction support
+  tx?: any,
 ) {
   const client = tx || prisma;
 
@@ -114,11 +110,7 @@ export async function updateUnit(
 // ============================================
 // SOFT DELETE (ARCHIVE) - with transaction support
 // ============================================
-export async function deleteUnit(
-  id: string,
-  userId: string,
-  tx?: any, // 👈 Added transaction support
-) {
+export async function deleteUnit(id: string, userId: string, tx?: any) {
   const client = tx || prisma;
 
   const unit = await client.unit.findFirst({
@@ -136,6 +128,18 @@ export async function deleteUnit(
     throw new Error("Unit not found");
   }
 
+  const activeLease = await client.lease.findFirst({
+    where: {
+      unitId: id,
+      status: "ACTIVE",
+      endDate: { gt: new Date() },
+    },
+  });
+
+  if (activeLease) {
+    throw new Error("Cannot archive unit with active lease");
+  }
+
   return client.unit.update({
     where: { id },
     data: {
@@ -150,11 +154,7 @@ export async function deleteUnit(
 // ============================================
 // RESTORE UNIT (with transaction support)
 // ============================================
-export async function restoreUnit(
-  id: string,
-  userId: string,
-  tx?: any, // 👈 Added transaction support
-) {
+export async function restoreUnit(id: string, userId: string, tx?: any) {
   const client = tx || prisma;
 
   const unit = await client.unit.findFirst({
@@ -186,11 +186,7 @@ export async function restoreUnit(
 // ============================================
 // HARD DELETE (Use with caution - with transaction support)
 // ============================================
-export async function hardDeleteUnit(
-  id: string,
-  userId: string,
-  tx?: any, // 👈 Added transaction support
-) {
+export async function hardDeleteUnit(id: string, userId: string, tx?: any) {
   const client = tx || prisma;
 
   const unit = await client.unit.findFirst({

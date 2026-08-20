@@ -1,7 +1,28 @@
-import { Prisma } from "@prisma/client";
+// backend/src/services/payment.service.ts
+import { Prisma, PaymentStatus, PaymentMethod } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
-export async function createPayment(userId: string, data: any) {
+// Define typed interfaces for service methods
+interface CreatePaymentData {
+  amount: number;
+  paymentDate?: string | Date;
+  method: PaymentMethod;
+  status?: PaymentStatus;
+  reference?: string;
+  notes?: string;
+  leaseId: string;
+  tenantId: string;
+}
+
+interface UpdatePaymentData {
+  amount?: number;
+  paymentDate?: string | Date;
+  method?: PaymentMethod;
+  reference?: string;
+  notes?: string;
+}
+
+export async function createPayment(userId: string, data: CreatePaymentData) {
   // 1. Verify lease ownership
   const lease = await prisma.lease.findFirst({
     where: {
@@ -34,13 +55,24 @@ export async function createPayment(userId: string, data: any) {
     throw new Error("Tenant does not belong to this lease");
   }
 
-  // 4. CREATE PAYMENT
+  // 4. Prevent REFUNDED as initial status
+  const status = data.status;
+  if (status === PaymentStatus.refunded) {
+    throw new Error(
+      "Cannot create a payment with REFUNDED status. Refunds are only available through the dedicated refund workflow.",
+    );
+  }
+
+  // 5. Default to pending if no status provided
+  const initialStatus = status || PaymentStatus.pending;
+
+  // 6. CREATE PAYMENT
   return prisma.payment.create({
     data: {
       amount: new Prisma.Decimal(data.amount),
       paymentDate: data.paymentDate ? new Date(data.paymentDate) : new Date(),
       method: data.method,
-      status: data.status,
+      status: initialStatus,
       reference: data.reference,
       notes: data.notes,
       leaseId: data.leaseId,
@@ -89,8 +121,12 @@ export async function getAllPayments(userId: string) {
   });
 }
 
-export async function updatePayment(id: string, userId: string, data: any) {
-  // Verify ownership first
+export async function updatePayment(
+  id: string,
+  userId: string,
+  data: UpdatePaymentData,
+) {
+  // 1. Verify ownership
   const existingPayment = await prisma.payment.findFirst({
     where: {
       id,
@@ -107,19 +143,68 @@ export async function updatePayment(id: string, userId: string, data: any) {
     throw new Error("Payment not found or access denied");
   }
 
+  // 2. Check immutability rules
+  if (existingPayment.status === PaymentStatus.completed) {
+    throw new Error("Completed payments cannot be modified");
+  }
+
+  if (existingPayment.status === PaymentStatus.refunded) {
+    throw new Error("Refunded payments cannot be modified");
+  }
+
+  // 3. Build update data with only allowed fields
+  const updateData: any = {};
+
+  // Only allow mutable fields for PENDING and FAILED payments
+  if (data.amount !== undefined) {
+    updateData.amount = new Prisma.Decimal(data.amount);
+  }
+
+  if (data.paymentDate !== undefined) {
+    updateData.paymentDate =
+      data.paymentDate instanceof Date
+        ? data.paymentDate
+        : new Date(data.paymentDate);
+  }
+
+  if (data.method !== undefined) {
+    updateData.method = data.method;
+  }
+
+  if (data.reference !== undefined) {
+    updateData.reference = data.reference;
+  }
+
+  if (data.notes !== undefined) {
+    updateData.notes = data.notes;
+  }
+
+  // Explicitly reject attempts to update immutable fields
+  // The UpdatePaymentData type doesn't include these, but we check at runtime
+  const forbiddenFields = [
+    "status",
+    "leaseId",
+    "tenantId",
+    "propertyId",
+    "unitId",
+  ];
+  const submittedForbidden = forbiddenFields.filter((field) => field in data);
+
+  if (submittedForbidden.length > 0) {
+    throw new Error(
+      `Cannot update immutable fields: ${submittedForbidden.join(", ")}`,
+    );
+  }
+
+  // 4. UPDATE PAYMENT
   return prisma.payment.update({
     where: { id },
-    data: {
-      amount: data.amount ? new Prisma.Decimal(data.amount) : undefined,
-      paymentDate: data.paymentDate ? new Date(data.paymentDate) : undefined,
-      method: data.method,
-      status: data.status,
-      reference: data.reference,
-      notes: data.notes,
-    },
+    data: updateData,
     include: {
       lease: true,
       tenant: true,
     },
   });
 }
+
+// REMOVED: deletePayment function - payments should never be deleted

@@ -6,6 +6,7 @@ import {
   updateUnit,
   deleteUnit,
   restoreUnit,
+  hardDeleteUnit,
 } from "../services/unit.service";
 import { prisma } from "../lib/prisma";
 import { createAuditLog } from "../services/audit.service";
@@ -141,35 +142,21 @@ export const archiveUnitHandler = asyncHandler(
       throw createError("Unit not found", 404);
     }
 
-    // Check for active leases
-    const activeLease = await prisma.lease.findFirst({
-      where: {
-        unitId: unitId,
-        status: "ACTIVE",
-        endDate: { gt: new Date() },
-      },
-    });
+    const archived = await deleteUnit(unitId, userId);
 
-    if (activeLease) {
-      throw createError("Cannot archive unit with active lease", 409);
-    }
-
-    // Soft delete - set deletedAt
-    await prisma.unit.update({
-      where: { id: unitId },
-      data: { deletedAt: new Date() },
-    });
-
-    await createAuditLog(userId, "ARCHIVE_UNIT", "Unit", unitId, {
-      unitNumber: existingUnit.unitNumber,
-      propertyId: existingUnit.propertyId,
-      bedrooms: existingUnit.bedrooms,
-      bathrooms: existingUnit.bathrooms,
-      rentAmount: Number(existingUnit.rentAmount),
+    await createAuditLog(userId, "ARCHIVE_UNIT", "Unit", archived.id, {
+      unitNumber: archived.unitNumber,
+      propertyId: archived.propertyId,
+      bedrooms: archived.bedrooms,
+      bathrooms: archived.bathrooms,
+      rentAmount: Number(archived.rentAmount),
       archivedAt: new Date().toISOString(),
     });
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      success: true,
+      unit: archived,
+    });
   },
 );
 
@@ -182,17 +169,7 @@ export const restoreUnitHandler = asyncHandler(
     const idParam = req.params.id;
     const id = Array.isArray(idParam) ? idParam[0] : idParam;
 
-    // Clear deletedAt
-    await prisma.unit.update({
-      where: { id },
-      data: { deletedAt: null },
-    });
-
-    const restored = await getUnitById(id, userId);
-
-    if (!restored) {
-      throw createError("Unit not found after restore", 500);
-    }
+    const restored = await restoreUnit(id, userId);
 
     await createAuditLog(userId, "RESTORE_UNIT", "Unit", restored.id, {
       unitNumber: restored.unitNumber,
@@ -203,7 +180,10 @@ export const restoreUnitHandler = asyncHandler(
       restoredAt: new Date().toISOString(),
     });
 
-    return res.status(200).json({ success: true, unit: restored });
+    return res.status(200).json({
+      success: true,
+      unit: restored,
+    });
   },
 );
 
@@ -215,12 +195,14 @@ export const deleteUnitHandler = asyncHandler(
     const userId = getUserId(req);
     const unitId = req.params.id as string;
 
+    // First verify the unit exists and belongs to the user
     const existingUnit = await getUnitById(unitId, userId);
 
     if (!existingUnit) {
       throw createError("Unit not found", 404);
     }
 
+    // Check if unit has any leases (business rule)
     const leaseCount = await prisma.lease.count({
       where: { unitId: unitId },
     });
@@ -232,7 +214,8 @@ export const deleteUnitHandler = asyncHandler(
       );
     }
 
-    await deleteUnit(unitId, userId);
+    // Use the hardDeleteUnit service which performs the actual deletion
+    await hardDeleteUnit(unitId, userId);
 
     await createAuditLog(userId, "DELETE_UNIT", "Unit", unitId, {
       unitNumber: existingUnit.unitNumber,

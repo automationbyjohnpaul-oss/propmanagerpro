@@ -209,7 +209,7 @@ prisma.property.findUnique({ where: { id } });
 every landlord's unleased tenants to every other landlord — a critical
 multi-tenant isolation breach.
 
-**Resolution:** Added `userId` directly to Tenant model (see D-017).
+**Resolution:** Added `userId` directly to Tenant model (see D-022).
 
 **Do not reintroduce this pattern.**
 
@@ -361,7 +361,7 @@ and harder to debug. Failures should be isolatable by step.
 
 **Target configuration:**
 
-```
+```text
 Build:      npm ci && npx prisma generate && npm run build
 Pre-deploy: npx prisma migrate deploy
 Start:      node dist/server.js
@@ -436,7 +436,53 @@ enforcing the subscription requirement.
 
 ---
 
-## D-025 — Property.unitCount Semantic Ownership
+## D-025 — Payment SSOT v1
+
+**Status:** 🟢 Implemented & Verified
+
+**Implementation:** ✅ Payment Integrity Hardening P1 complete
+
+**Decision:** Establish Payment Integrity Hardening rules as the authoritative Payment SSOT for PropManager Pro.
+
+**Rules:**
+
+1. Payments are financial records and must be preserved.
+2. Payments must never be hard-deleted.
+3. `COMPLETED` payments are immutable.
+4. `REFUNDED` payments are immutable.
+5. `PENDING` and `FAILED` payments remain editable.
+6. Normal payment updates cannot change `status`, `leaseId`, `tenantId`, `propertyId`, or `unitId`.
+7. Normal `PUT` operations do not perform payment lifecycle transitions.
+8. `REFUNDED` cannot be used as an initial payment status.
+9. No `VOID` or `VOIDED` status is introduced.
+10. Refund workflow is intentionally deferred to a future phase.
+11. Payment business rules are enforced authoritatively at the service layer.
+12. Frontend restrictions are UX safeguards only and must not be relied upon for security or integrity.
+13. Financial payment mutations remain auditable.
+
+**Architecture Pattern:**
+
+- Service → authorization, business rules, and database mutations
+- Controller → HTTP orchestration and audit logging
+- Validator → Zod request validation
+- Prisma → database access
+
+**Verification:**
+
+- Backend TypeScript: 0 errors
+- Frontend TypeScript: 0 errors
+- Payment service tests: 20 passed, 0 failed, 0 skipped
+- DELETE payment endpoint removed
+- Ownership checks verified
+- Immutability rules verified
+
+**Deferred:**
+
+Refund workflow remains intentionally deferred. `REFUNDED` is a terminal state in the current Payment SSOT but has no dedicated refund workflow yet.
+
+---
+
+## D-026 — Property.unitCount Semantic Ownership
 
 **Status:** ⚪ Pending — decision required before schema hardening
 **Implementation:** ❌ Blocked on decision
@@ -469,7 +515,7 @@ vs actual units.
 
 # Documentation Decisions
 
-## D-026 — Documentation as Project Infrastructure
+## D-027 — Documentation as Project Infrastructure
 
 **Status:** 🟢 Confirmed
 
@@ -481,7 +527,7 @@ future AI continuation significantly more reliable.
 
 ---
 
-## D-027 — AI Handoff Document
+## D-028 — AI Handoff Document
 
 **Status:** 🟢 Confirmed
 
@@ -495,7 +541,7 @@ active phase, next task, and important constraints.
 
 ---
 
-## D-028 — Single Source of Truth Hierarchy
+## D-029 — Single Source of Truth Hierarchy
 
 **Status:** 🟢 Confirmed
 
@@ -541,5 +587,5 @@ were made, what changed historically, and what is planned.
 
 _Last updated: August 2026_
 _Migrated and consolidated from two separate decision log versions._
-_Original decisions D-001 through D-020 preserved. Added D-021 through D-028_
+_Original decisions D-001 through D-020 preserved. Added D-021 through D-029_
 _from architecture audit session. Decision lifecycle and status markers added._

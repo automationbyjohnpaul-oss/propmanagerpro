@@ -4,7 +4,6 @@ import {
   getUnit,
   createUnitHandler,
   updateUnitHandler,
-  deleteUnitHandler,
   restoreUnitHandler,
   archiveUnitHandler,
 } from "../controllers/unit.controller";
@@ -43,8 +42,5 @@ router.patch("/:id/archive", asyncHandler(archiveUnitHandler));
 
 // RESTORE archived unit
 router.patch("/:id/restore", asyncHandler(restoreUnitHandler));
-
-// DELETE (hard delete - use with caution)
-router.delete("/:id", asyncHandler(deleteUnitHandler));
 
 export default router;

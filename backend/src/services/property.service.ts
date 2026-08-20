@@ -106,3 +106,51 @@ export async function deleteProperty(id: string, userId: string) {
     },
   });
 }
+
+// ============================================
+// ARCHIVE PROPERTY
+// ============================================
+export async function archiveProperty(id: string, userId: string) {
+  const property = await prisma.property.findFirst({
+    where: {
+      id,
+      userId,
+      deletedAt: null,
+    },
+  });
+
+  if (!property) {
+    throw new Error("Active property not found");
+  }
+
+  return prisma.property.update({
+    where: { id },
+    data: {
+      deletedAt: new Date(),
+    },
+  });
+}
+
+// ============================================
+// RESTORE PROPERTY
+// ============================================
+export async function restoreProperty(id: string, userId: string) {
+  const property = await prisma.property.findFirst({
+    where: {
+      id,
+      userId,
+      deletedAt: { not: null },
+    },
+  });
+
+  if (!property) {
+    throw new Error("Archived property not found");
+  }
+
+  return prisma.property.update({
+    where: { id },
+    data: {
+      deletedAt: null,
+    },
+  });
+}

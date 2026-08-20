@@ -5,6 +5,8 @@ import {
   createProperty,
   updateProperty,
   deleteProperty,
+  archiveProperty as archivePropertyService,
+  restoreProperty as restorePropertyService,
 } from "../services/property.service";
 import { prisma } from "../lib/prisma";
 import { createAuditLog } from "../services/audit.service";
@@ -27,24 +29,26 @@ function createError(message: string, statusCode: number) {
 // ============================================
 // GET PROPERTIES
 // ============================================
-export const getProperties = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const { status } = req.query;
+export const getProperties = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const { status } = req.query;
 
-  const where = {
-    userId,
-    ...(status === "archived"
-      ? { deletedAt: { not: null } }
-      : { deletedAt: null }),
-  };
+    const where = {
+      userId,
+      ...(status === "archived"
+        ? { deletedAt: { not: null } }
+        : { deletedAt: null }),
+    };
 
-  const properties = await prisma.property.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  });
+    const properties = await prisma.property.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
 
-  return res.status(200).json(properties);
-});
+    return res.status(200).json(properties);
+  },
+);
 
 // ============================================
 // GET SINGLE PROPERTY
@@ -63,49 +67,41 @@ export const getProperty = asyncHandler(async (req: Request, res: Response) => {
 // ============================================
 // CREATE PROPERTY
 // ============================================
-export const createPropertyHandler = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const property = await createProperty({
-    ...req.body,
-    userId: userId,
-  });
+export const createPropertyHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const property = await createProperty({
+      ...req.body,
+      userId: userId,
+    });
 
-  await createAuditLog(
-    userId,
-    "CREATE_PROPERTY",
-    "Property",
-    property.id,
-    {
+    await createAuditLog(userId, "CREATE_PROPERTY", "Property", property.id, {
       name: property.name,
       address: property.address,
       unitCount: property.unitCount,
-    }
-  );
+    });
 
-  return res.status(201).json(property);
-});
+    return res.status(201).json(property);
+  },
+);
 
 // ============================================
 // UPDATE PROPERTY
 // ============================================
-export const updatePropertyHandler = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const propertyId = req.params.id as string;
+export const updatePropertyHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const propertyId = req.params.id as string;
 
-  const existingProperty = await getPropertyById(propertyId, userId);
+    const existingProperty = await getPropertyById(propertyId, userId);
 
-  if (!existingProperty) {
-    throw createError("Property not found", 404);
-  }
+    if (!existingProperty) {
+      throw createError("Property not found", 404);
+    }
 
-  const property = await updateProperty(propertyId, userId, req.body);
+    const property = await updateProperty(propertyId, userId, req.body);
 
-  await createAuditLog(
-    userId,
-    "UPDATE_PROPERTY",
-    "Property",
-    property.id,
-    {
+    await createAuditLog(userId, "UPDATE_PROPERTY", "Property", property.id, {
       updatedFields: Object.keys(req.body),
       previousData: {
         name: existingProperty.name,
@@ -117,124 +113,92 @@ export const updatePropertyHandler = asyncHandler(async (req: Request, res: Resp
         address: property.address,
         unitCount: property.unitCount,
       },
-    }
-  );
+    });
 
-  return res.status(200).json(property);
-});
+    return res.status(200).json(property);
+  },
+);
 
 // ============================================
 // ARCHIVE PROPERTY
 // ============================================
-export const archiveProperty = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const idParam = req.params.id;
-  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+export const archiveProperty = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const idParam = req.params.id;
+    const id = Array.isArray(idParam) ? idParam[0] : idParam;
 
-  const property = await prisma.property.findFirst({
-    where: { id, userId, deletedAt: null },
-  });
+    const property = await getPropertyById(id, userId);
 
-  if (!property) {
-    throw createError("Active property not found", 404);
-  }
+    if (!property) {
+      throw createError("Active property not found", 404);
+    }
 
-  const updated = await prisma.property.update({
-    where: { id },
-    data: { deletedAt: new Date() },
-  });
+    const updated = await archivePropertyService(id, userId);
 
-  await createAuditLog(
-    userId,
-    "ARCHIVE_PROPERTY",
-    "Property",
-    id,
-    {
+    await createAuditLog(userId, "ARCHIVE_PROPERTY", "Property", id, {
       name: property.name,
       address: property.address,
       unitCount: property.unitCount,
       archivedAt: new Date().toISOString(),
-    }
-  );
+    });
 
-  return res.status(200).json({
-    message: "Property archived successfully",
-    property: updated,
-  });
-});
+    return res.status(200).json({
+      message: "Property archived successfully",
+      property: updated,
+    });
+  },
+);
 
 // ============================================
 // RESTORE PROPERTY
 // ============================================
-export const restoreProperty = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const idParam = req.params.id;
-  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+export const restoreProperty = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const idParam = req.params.id;
+    const id = Array.isArray(idParam) ? idParam[0] : idParam;
 
-  const property = await prisma.property.findFirst({
-    where: { id, userId },
-  });
+    const restored = await restorePropertyService(id, userId);
 
-  if (!property) {
-    throw createError("Property not found", 404);
-  }
-
-  if (!property.deletedAt) {
-    throw createError("Property is not archived", 400);
-  }
-
-  const restored = await prisma.property.update({
-    where: { id },
-    data: { deletedAt: null },
-  });
-
-  await createAuditLog(
-    userId,
-    "RESTORE_PROPERTY",
-    "Property",
-    id,
-    {
-      name: property.name,
-      address: property.address,
-      unitCount: property.unitCount,
+    await createAuditLog(userId, "RESTORE_PROPERTY", "Property", id, {
+      name: restored.name,
+      address: restored.address,
+      unitCount: restored.unitCount,
       restoredAt: new Date().toISOString(),
-    }
-  );
+    });
 
-  return res.status(200).json({
-    message: "Property restored successfully",
-    property: restored,
-  });
-});
+    return res.status(200).json({
+      message: "Property restored successfully",
+      property: restored,
+    });
+  },
+);
 
 // ============================================
 // DELETE PROPERTY (Soft Delete)
 // ============================================
-export const deletePropertyHandler = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  const idParam = req.params.id;
-  const id = Array.isArray(idParam) ? idParam[0] : String(idParam);
+export const deletePropertyHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const idParam = req.params.id;
+    const id = Array.isArray(idParam) ? idParam[0] : String(idParam);
 
-  const property = await getPropertyById(id, userId);
+    const property = await getPropertyById(id, userId);
 
-  if (!property) {
-    throw createError("Property not found", 404);
-  }
+    if (!property) {
+      throw createError("Property not found", 404);
+    }
 
-  await deleteProperty(id, userId);
+    await deleteProperty(id, userId);
 
-  await createAuditLog(
-    userId,
-    "DELETE_PROPERTY",
-    "Property",
-    id,
-    {
+    await createAuditLog(userId, "DELETE_PROPERTY", "Property", id, {
       name: property.name,
       address: property.address,
       unitCount: property.unitCount,
       deletedAt: new Date().toISOString(),
-    }
-  );
+    });
 
-  return res.status(204).send();
-});
+    return res.status(204).send();
+  },
+);
