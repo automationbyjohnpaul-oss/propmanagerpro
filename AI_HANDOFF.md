@@ -4,7 +4,9 @@
 
 This document is the continuation anchor for AI-assisted development.
 
-A new AI chat should read this document first before making architectural or implementation decisions.
+A new AI session should use this document to understand the project's operating rules, source-of-truth hierarchy, continuation protocol, and durable engineering context.
+
+`PROJECT_STATE.md` remains the authoritative operational state document.
 
 ---
 
@@ -41,6 +43,10 @@ PropManager Pro/
 └── tests/
 ```
 
+The actual filesystem is always the implementation truth.
+
+Not every documented or planned directory is necessarily implemented.
+
 ---
 
 # Stack
@@ -76,6 +82,8 @@ Backend  → Railway
 Database → Supabase PostgreSQL
 ```
 
+Current platform status must be verified before being treated as current deployment truth.
+
 ---
 
 # Current Core Modules
@@ -90,11 +98,13 @@ Payments
 Finance
 ```
 
+Additional domains such as billing, documents, maintenance, communications, and AI-assisted workflows must not be treated as completed functionality unless verified in the current codebase.
+
 ---
 
 # Authentication
 
-Current flow:
+Current documented flow:
 
 ```text
 Register/Login
@@ -120,11 +130,13 @@ email
 role
 ```
 
-Current expiration:
+Current documented expiration:
 
 ```text
 7 days
 ```
+
+These details must be verified against the current implementation before making authentication changes.
 
 ---
 
@@ -142,21 +154,26 @@ API base URL:
 NEXT_PUBLIC_API_URL
 ```
 
-Must contain only the backend origin.
+The base URL must contain only the backend origin.
 
-Correct:
+Correct structure:
 
 ```text
 https://propmanagerpro-production.up.railway.app
 ```
 
-Service endpoints include:
+Domain services append paths such as:
 
 ```text
-/api/...
+/api/auth/login
+/api/properties
+/api/tenants
+/api/leases
+/api/payments
+/api/finance
 ```
 
-Do not create:
+Never create:
 
 ```text
 /api/api/...
@@ -168,13 +185,15 @@ There is also:
 frontend/src/lib/api-client.ts
 ```
 
-which appears unused by the rest of the frontend and should be treated as a cleanup candidate rather than a second API architecture.
+Its active usage must be verified before removal or consolidation.
+
+It must not be treated as a second API architecture merely because the file exists.
 
 ---
 
 # Important Backend Security Rule
 
-Authenticated resources must be scoped by:
+Authenticated resources must be scoped by the authenticated identity:
 
 ```text
 req.userId
@@ -184,23 +203,38 @@ Never trust a client-supplied user ID for ownership decisions.
 
 Authorization must be based on the authenticated JWT identity.
 
+Non-negotiable principle:
+
+> A user must not gain access to another user's protected resources merely by knowing a resource ID.
+
+Tenant isolation must be preserved in every new feature and modification.
+
 ---
 
 # Current Deployment State
 
-⚪ UNVERIFIED — requires re-establishment before treating as current
+⚪ **UNVERIFIED — requires re-establishment before being treated as current**
 
-The Railway backend previously deployed successfully and database connectivity through Railway to Supabase was validated. However, the Railway subscription has since expired.
+The Railway backend previously deployed successfully and database connectivity through Railway to Supabase was previously validated.
 
-Current known deployment status:
+The Railway subscription has since expired.
+
+Current known deployment state:
 
 ```text
-Frontend (Vercel)     → 🟡 Previously deployed — connectivity unverified
-Backend (Railway)     → 🔴 Expired — must be redeployed
-Database (Supabase)   → 🟡 Exists — production schema state unverified
+Frontend (Vercel)
+→ 🟡 Previously deployed — current connectivity unverified
+
+Backend (Railway)
+→ 🔴 Expired — must be redeployed
+
+Database (Supabase)
+→ 🟡 Exists — current production schema state unverified
 ```
 
-Before treating the backend as available, verify:
+Do not describe the backend as currently healthy or available without current verification.
+
+Before declaring production operational, verify:
 
 ```text
 Railway redeployment
@@ -211,12 +245,26 @@ Database connectivity confirmed
       ↓
 Authentication working
       ↓
-CRUD working
+Authenticated CRUD working
       ↓
 Tenant isolation verified
 ```
 
-For exact current deployment state, consult:
+Production verification must establish the complete path:
+
+```text
+Vercel
+   ↓
+Railway
+   ↓
+Express
+   ↓
+Prisma
+   ↓
+Supabase PostgreSQL
+```
+
+For the current operational state, consult:
 
 ```text
 PROJECT_STATE.md
@@ -224,23 +272,41 @@ PROJECT_STATE.md
 
 ---
 
-# Current Development Direction
+# Current Development Phase
 
-The project is moving from:
+🟡 **DOCUMENTATION / ARCHITECTURE FREEZE**
 
-```text
-Feature development
-```
+The project is currently completing its documentation and architecture-state freeze.
 
-toward:
+The immediate objective is:
 
 ```text
-Production hardening
+Verify current implementation
+        ↓
+Verify current configuration
+        ↓
+Verify deployment state where relevant
+        ↓
+Freeze accurate project state
+        ↓
+Finalize architecture/decisions/technical debt
+        ↓
+Complete consistency audit
+        ↓
+Begin next engineering phase
 ```
 
-The next major focus is Phase 5.2 production hardening.
+Do not begin major feature expansion while the documentation/state freeze remains incomplete.
 
-Primary areas:
+---
+
+# Next Engineering Phase
+
+The next engineering phase is expected to be:
+
+## Phase 5.2 — Production Hardening
+
+Expected areas include:
 
 - CORS
 - Rate limiting
@@ -252,6 +318,11 @@ Primary areas:
 - Reliability
 - Deployment determinism
 - Testing
+- Production verification
+
+Phase 5.2 must not be treated as complete merely because historical work was previously performed.
+
+Each item requires current implementation evidence.
 
 ---
 
@@ -259,14 +330,26 @@ Primary areas:
 
 ## Frontend
 
-Investigate duplicate API abstraction:
+Investigate:
 
 ```text
-lib/api-client.ts     → appears unused — verify before removing
-services/api.ts       → confirmed primary API abstraction
+frontend/src/lib/api-client.ts
+frontend/src/services/api.ts
 ```
 
-## Backend
+Current intended architecture:
+
+```text
+services/api.ts
+        ↓
+domain API/service modules
+```
+
+`lib/api-client.ts` appears unused based on previous repository inspection, but its current usage must be verified before removal.
+
+---
+
+## Backend Build
 
 Review:
 
@@ -276,9 +359,13 @@ postinstall: prisma generate
 
 Production-critical Prisma generation should eventually be explicit rather than dependent on lifecycle hooks.
 
+Any change to the build/deployment pipeline must be verified against the actual package configuration and deployment platform.
+
+---
+
 ## Startup
 
-Startup health checks currently run non-blocking.
+Startup health checks have historically run non-blocking.
 
 Review whether production readiness should distinguish:
 
@@ -292,26 +379,34 @@ from:
 application ready
 ```
 
+Do not change this behavior without inspecting the current startup implementation first.
+
 ---
 
 # AI Operating Rules
 
 When continuing this project:
 
-1. Read `PROJECT_STATE.md` first.
-2. Read `AI_HANDOFF.md`.
-3. Consult `ARCHITECTURE.md` before changing architecture.
-4. Consult `DECISION_LOG.md` before reversing an important decision.
-5. Check the actual source code before assuming a documented feature exists.
-6. Never mark TODO items complete without evidence.
-7. Do not introduce unnecessary architecture.
-8. Make one logical change at a time.
-9. Test after each meaningful change.
-10. Prefer explicit commands over implicit behavior.
-11. Preserve financial correctness.
-12. Preserve tenant isolation.
-13. Do not change unrelated code while fixing a targeted problem.
-14. Update documentation after significant architectural changes.
+1. Read `AI_HANDOFF.md`.
+2. Read `PROJECT_STATE.md`.
+3. Follow the source-of-truth hierarchy.
+4. Consult `ARCHITECTURE.md` before changing architecture.
+5. Consult `DECISION_LOG.md` before reversing an important decision.
+6. Read relevant recent `CHANGELOG.md` entries when historical context matters.
+7. Read `TODO.md` when determining outstanding work.
+8. Inspect the actual source code before assuming a documented feature exists.
+9. Verify deployed behavior when the question concerns production.
+10. Never mark TODO items complete without evidence.
+11. Do not introduce unnecessary architecture.
+12. Make one logical change at a time.
+13. Test after each meaningful change.
+14. Prefer explicit commands over implicit behavior.
+15. Preserve financial correctness.
+16. Preserve tenant isolation.
+17. Do not change unrelated code while fixing a targeted problem.
+18. Report verification evidence.
+19. Update documentation after significant changes.
+20. Never treat historical information as current without verification.
 
 ---
 
@@ -333,13 +428,13 @@ If documentation conflicts with actual implementation:
 
 ```text
 STOP
-↓
+ ↓
 VERIFY THE CODE
-↓
+ ↓
 VERIFY DEPLOYED STATE IF RELEVANT
-↓
+ ↓
 UPDATE PROJECT_STATE.md
-↓
+ ↓
 UPDATE AFFECTED DOCUMENTS
 ```
 
@@ -349,7 +444,7 @@ Never silently assume that documentation is more correct than the system.
 
 # Continuation Protocol
 
-A new AI session should begin by determining:
+A new AI session should determine:
 
 ```text
 What is actually implemented?
@@ -358,13 +453,124 @@ What phase are we in?
 What is the next smallest safe change?
 ```
 
-Do not immediately start modifying code.
+Do not immediately modify code.
 
 First establish the current state.
 
+The AI should not ask the user to repeat information that can be established from the project documentation, repository, configuration, or available deployment evidence.
+
 ---
 
-# Document Maintenance Rule
+# Inspect Before Changing
+
+The required workflow is:
+
+```text
+Read authoritative documentation
+        ↓
+Inspect actual implementation
+        ↓
+Establish current behavior
+        ↓
+Identify discrepancy/risk/task
+        ↓
+Choose smallest safe change
+        ↓
+Implement
+        ↓
+Test
+        ↓
+Assess documentation impact
+        ↓
+Update affected documents
+        ↓
+Verify consistency
+```
+
+Do not skip the inspection stage simply because documentation describes the expected behavior.
+
+---
+
+# Smallest Safe Change Principle
+
+Prefer:
+
+```text
+One logical change
+        ↓
+Verify
+        ↓
+Continue
+```
+
+Avoid:
+
+```text
+Multiple unrelated changes
+        ↓
+Large refactor
+        ↓
+Difficult debugging
+```
+
+Do not introduce new architecture when an existing abstraction can safely be reused.
+
+---
+
+# Financial Correctness
+
+Financial behavior is a protected system invariant.
+
+Changes involving:
+
+- payments
+- leases
+- rent
+- balances
+- finance analytics
+- financial calculations
+- payment history
+- payment deletion/voiding
+
+must be evaluated for business-rule and data-integrity impact before implementation.
+
+Never sacrifice financial correctness for implementation convenience.
+
+---
+
+# Tenant Isolation
+
+Tenant isolation is a protected security invariant.
+
+Every authenticated resource operation must respect the authenticated user's ownership boundary.
+
+Before completing a change that touches protected resources, verify that:
+
+```text
+User A
+```
+
+cannot access or modify:
+
+```text
+User B's data
+```
+
+through:
+
+- direct IDs
+- API requests
+- nested resources
+- analytics
+- filters
+- search
+- exports
+- aggregate queries
+- related-resource traversal
+
+---
+
+# Documentation Maintenance Rule
 
 Do not rewrite every project document after every code change.
 
@@ -382,9 +588,9 @@ The goal is:
 
 # When Documentation Must Be Updated
 
-After making a change, determine whether the change is:
+After making a change, determine whether it is:
 
-### A. Local / trivial change
+## A. Local / Trivial Change
 
 Examples:
 
@@ -394,13 +600,15 @@ Examples:
 - refactoring internal code without changing behavior
 - improving variable names
 - removing dead code
-- fixing an isolated implementation bug with no architectural or behavioral significance
+- fixing an isolated implementation bug with no lasting architectural or behavioral significance
 
 Normally:
 
 **No project documentation update is required.**
 
-### B. Material change
+---
+
+## B. Material Change
 
 A change is material when it affects one or more of:
 
@@ -429,33 +637,33 @@ A change is material when it affects one or more of:
 - known risks
 - future work
 
-For material changes, update the **minimum set of documents required to keep the source of truth synchronized.**
+For material changes:
+
+> Update the minimum set of documents required to keep the source of truth synchronized.
 
 ---
 
 # Document Update Matrix
 
-| Change                          | PROJECT_STATE         | ARCHITECTURE             | DECISION_LOG            | CHANGELOG         | TODO                 | AI_HANDOFF                          |
-| ------------------------------- | --------------------- | ------------------------ | ----------------------- | ----------------- | -------------------- | ----------------------------------- |
-| Minor UI fix                    | Usually no            | No                       | No                      | No                | No                   | No                                  |
-| Bug fix no lasting significance | Usually no            | No                       | No                      | Optional          | No                   | No                                  |
-| Major bug fix                   | Yes if state changes  | If architectural         | If decision involved    | Yes               | If TODO affected     | If workflow changes                 |
-| New feature                     | Yes                   | If architecture affected | If decision involved    | Yes               | If TODO affected     | Usually no                          |
-| Database schema change          | Yes                   | Yes                      | If significant decision | Yes               | If affected          | If workflow/risk changes            |
-| API contract change             | Yes                   | Yes                      | If significant          | Yes               | If affected          | If workflow changes                 |
-| Security change                 | Yes                   | Yes if architectural     | Yes if a decision       | Yes               | If follow-up remains | Yes if procedure changes            |
-| Deployment change               | Yes                   | Yes if arch/infra        | Yes if significant      | Yes               | If follow-up remains | Yes if deployment procedure changes |
-| Major architectural refactor    | Yes                   | Yes                      | Yes                     | Yes               | Yes if affected      | Yes                                 |
-| New major engineering rule      | Yes if state affected | Possibly                 | Yes                     | Yes if noteworthy | Possibly             | **Yes**                             |
-| Phase completion                | Yes                   | Usually no               | No                      | Yes               | Yes                  | Yes if handoff context changes      |
+| Change                               | PROJECT_STATE         | ARCHITECTURE                       | DECISION_LOG         | CHANGELOG     | TODO                 | AI_HANDOFF                          |
+| ------------------------------------ | --------------------- | ---------------------------------- | -------------------- | ------------- | -------------------- | ----------------------------------- |
+| Minor UI fix                         | Usually no            | No                                 | No                   | No            | No                   | No                                  |
+| Bug fix with no lasting significance | Usually no            | No                                 | No                   | Optional      | No                   | No                                  |
+| Major bug fix                        | Yes if state changes  | If architectural                   | If decision involved | Yes           | If TODO affected     | If workflow changes                 |
+| New feature                          | Yes                   | If architecture affected           | If decision involved | Yes           | If TODO affected     | Usually no                          |
+| Database schema change               | Yes                   | Yes                                | If significant       | Yes           | If affected          | If workflow/risk changes            |
+| API contract change                  | Yes                   | Yes                                | If significant       | Yes           | If affected          | If workflow changes                 |
+| Security change                      | Yes                   | Yes if architectural               | Yes if decision      | Yes           | If follow-up remains | Yes if procedure changes            |
+| Deployment change                    | Yes                   | Yes if architecture/infrastructure | If significant       | Yes           | If follow-up remains | Yes if deployment procedure changes |
+| Major architectural refactor         | Yes                   | Yes                                | Yes                  | Yes           | If affected          | Yes                                 |
+| New major engineering rule           | Yes if state affected | Possibly                           | Yes                  | If noteworthy | Possibly             | Yes                                 |
+| Phase completion                     | Yes                   | Usually no                         | No                   | Yes           | Yes                  | Yes if handoff context changes      |
 
 ---
 
 # Mandatory Post-Change Documentation Check
 
-After completing a meaningful change, perform a documentation-impact check.
-
-Ask:
+After every meaningful change, ask:
 
 1. Did the current project state change?
 2. Did the architecture change?
@@ -467,7 +675,7 @@ Ask:
 
 Then update only the affected documents.
 
-The AI must **not skip this check for material changes**.
+The AI must not skip this check for material changes.
 
 ---
 
@@ -477,8 +685,11 @@ If documentation conflicts with actual implementation:
 
 1. Inspect the implementation.
 2. Determine the actual current behavior.
-3. Correct the outdated documentation.
-4. If the discrepancy resulted from an important decision, record the decision/change in DECISION_LOG.md and CHANGELOG.md as appropriate.
+3. Verify deployed behavior when relevant.
+4. Correct outdated documentation.
+5. If the discrepancy resulted from an important decision, record the decision/change in `DECISION_LOG.md`.
+6. Record meaningful historical changes in `CHANGELOG.md`.
+7. Update `PROJECT_STATE.md` to reflect the resulting current truth.
 
 Never preserve incorrect documentation simply because it was written earlier.
 
@@ -489,14 +700,15 @@ Never preserve incorrect documentation simply because it was written earlier.
 At the beginning of a new AI session:
 
 1. Read `AI_HANDOFF.md` to understand the operating rules and continuation protocol.
-2. Read `PROJECT_STATE.md` to establish the current project truth.
+2. Read `PROJECT_STATE.md` to establish the current project state.
 3. Read `ARCHITECTURE.md` when architectural context is needed.
 4. Read relevant sections of `DECISION_LOG.md`.
 5. Read relevant recent entries in `CHANGELOG.md`.
 6. Read `TODO.md`.
 7. Inspect actual source code/configuration before making assumptions.
-8. Identify the current phase and immediate objective.
-9. Continue from the existing state rather than recreating previous work.
+8. Verify deployment state when relevant.
+9. Identify the current phase and immediate objective.
+10. Continue from the existing state rather than recreating previous work.
 
 Do not ask the user to repeat information that can be established from the project documentation and source code.
 
@@ -508,12 +720,12 @@ Before ending a significant work session:
 
 1. Verify the implementation.
 2. Run relevant tests/build checks.
-3. Update PROJECT_STATE.md if the current state changed.
-4. Update CHANGELOG.md for meaningful completed changes.
-5. Update ARCHITECTURE.md if architecture changed.
-6. Update DECISION_LOG.md if an important decision was made.
-7. Update TODO.md if outstanding work changed.
-8. Update AI_HANDOFF.md only if the handoff rules or durable AI context changed.
+3. Update `PROJECT_STATE.md` if the current state changed.
+4. Update `CHANGELOG.md` for meaningful completed changes.
+5. Update `ARCHITECTURE.md` if architecture changed.
+6. Update `DECISION_LOG.md` if an important decision was made.
+7. Update `TODO.md` if outstanding work changed.
+8. Update `AI_HANDOFF.md` only if the handoff rules or durable AI context changed.
 9. Ensure documentation does not contradict the implementation.
 10. Leave the repository in a state that another AI can continue safely.
 
@@ -521,37 +733,112 @@ Before ending a significant work session:
 
 # Critical Principle
 
-**Documentation is part of the engineering system, but documentation is not the work itself.**
+Documentation is part of the engineering system, but documentation is not the work itself.
 
 Do not waste development time continuously rewriting documentation.
 
 Instead:
 
 > **Change the code when the code needs changing.**
->
+
 > **Update the source-of-truth document when the truth changes.**
->
+
 > **Record history when something meaningful happened.**
->
+
 > **Record decisions when an important decision was made.**
->
+
 > **Update the handoff instructions when the way future AI sessions should operate changes.**
 
-The objective is to keep PropManager Pro **accurate, maintainable, transferable, and AI-debuggable** without creating unnecessary documentation overhead.
+The objective is to keep PropManager Pro:
+
+```text
+Accurate
+Maintainable
+Transferable
+AI-debuggable
+```
+
+without creating unnecessary documentation overhead.
 
 ---
 
 # Default AI Behavior
 
-When uncertain whether documentation needs updating, **inspect the impact of the change rather than automatically updating everything**.
+When uncertain whether documentation needs updating, inspect the impact of the change rather than automatically updating everything.
 
-The preferred behavior is:
+Preferred workflow:
 
-**Implement → Test → Assess impact → Update affected source-of-truth documents → Verify consistency → Continue.**
+```text
+Implement
+   ↓
+Test
+   ↓
+Assess impact
+   ↓
+Update affected source-of-truth documents
+   ↓
+Verify consistency
+   ↓
+Continue
+```
 
 Never:
 
-**Implement → Rewrite every document regardless of impact.**
+```text
+Implement
+   ↓
+Rewrite every document regardless of impact
+```
+
+---
+
+# Final Rule
+
+The AI must never confuse:
+
+```text
+Documented
+```
+
+with:
+
+```text
+Implemented
+```
+
+or:
+
+```text
+Historically implemented
+```
+
+with:
+
+```text
+Currently working
+```
+
+The correct progression is:
+
+```text
+Documented claim
+      ↓
+Inspect implementation
+      ↓
+Verify behavior
+      ↓
+Establish evidence
+      ↓
+Declare current truth
+```
+
+**Code is truth.**
+
+**Database state is truth.**
+
+**Deployed behavior is truth when deployment is relevant.**
+
+Documentation records and communicates that truth; it does not override it.
 
 ---
 

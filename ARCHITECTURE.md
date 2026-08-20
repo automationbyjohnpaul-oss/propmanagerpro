@@ -1,360 +1,354 @@
-Paste this entire content into Notepad:
-
----
-
-```text
 # PropManager Pro — Architecture
 
-## 1. Purpose
-
-PropManager Pro is a mobile-first property management SaaS designed for small landlords managing approximately 1–10 units.
-
-The architecture prioritizes:
-
-* Simplicity over feature quantity
-* Mobile-first usability
-* Clear business workflows
-* Financial correctness
-* Multi-tenant data isolation
-* Modular and readable code
-* Explicit and deterministic deployment
-* AI-assisted development, debugging, and maintenance
-* Reliability before feature expansion
-
-The system is intentionally designed so that an AI assistant can understand, debug, modify, and extend it without requiring unnecessary architectural complexity.
+**Last Updated:** August 20, 2026
+**Architecture State:** 🔒 LOCKED — SSOT Architecture Baseline
+**Current Focus:** SSOT Enforcement / Backend Architecture Consolidation
 
 ---
 
-## 2. Repository Structure
+# 1. Architectural Principles
+
+PropManager Pro follows these primary engineering principles:
+
+1. Single Source of Truth (SSOT)
+2. Tenant isolation by authenticated user identity
+3. Financial correctness over convenience
+4. Explicit and deterministic behavior
+5. Simple, readable architecture
+6. Small, safe, verifiable changes
+7. AI-debuggable code
+8. Documentation must reflect implementation
+
+The system should prefer one authoritative implementation over duplicated logic.
+
+---
+
+# 2. Source-of-Truth Hierarchy
+
+When determining what is actually true:
+
+1. Actual code/database/deployed behavior
+2. `PROJECT_STATE.md`
+3. `ARCHITECTURE.md`
+4. `DECISION_LOG.md`
+5. `DOCS/`
+6. `CHANGELOG.md`
+7. `TODO.md`
+8. `AI_HANDOFF.md`
+9. `README.md`
+
+If documentation conflicts with implementation:
 
 ```text
-PropManager Pro/
-│
-├── PROJECT_STATE.md
-├── ARCHITECTURE.md
-├── DECISION_LOG.md
-├── CHANGELOG.md
-├── TODO.md
-├── AI_HANDOFF.md
-├── README.md
-│
-├── DOCS/
-│   ├── API.md
-│   ├── DEPLOYMENT.md
-│   ├── SECURITY.md
-│   └── BILLING.md
-│
-├── frontend/
-├── backend/
-├── ai_worker/
-├── database/
-├── config/
-└── tests/
-```
+STOP
+↓
+Inspect actual implementation
+↓
+Determine current behavior
+↓
+Correct PROJECT_STATE.md
+↓
+Correct affected documentation
+↓
+Record important decision/history if necessary
+Documentation must never be treated as more authoritative than the running system.
 
-Some directories/features may still be planned rather than fully implemented. `PROJECT_STATE.md` is authoritative for current implementation status.
-
----
-
-## 3. System Architecture
-
+3. System Architecture
 PropManager Pro follows a modular full-stack architecture:
 
-```text
-┌─────────────────────────────┐
-│          Browser            │
-│      Mobile / Desktop       │
-└──────────────┬──────────────┘
-               │
-               │ HTTPS / REST API
-               ▼
-┌─────────────────────────────┐
-│          Frontend           │
-│ Next.js + TypeScript        │
-│ App Router                  │
-│ Tailwind CSS                │
-│ Auth Context                │
-└──────────────┬──────────────┘
-               │
-               │ HTTP + JWT
-               ▼
-┌─────────────────────────────┐
-│          Backend            │
-│ Node.js + Express           │
-│ TypeScript                  │
-│ REST API                    │
-│ Authentication              │
-│ Business Rules              │
-│ Validation                  │
-└──────────────┬──────────────┘
-               │
-               │ Prisma
-               ▼
-┌─────────────────────────────┐
-│          Database           │
-│     PostgreSQL / Supabase   │
-└─────────────────────────────┘
-```
+text
+Browser
+   ↓
+Next.js Frontend
+   ↓
+Express Backend
+   ↓
+Prisma
+   ↓
+PostgreSQL / Supabase
+4. Backend Layer Responsibilities
+text
+HTTP Request
+     ↓
+Middleware
+     ↓
+Controller
+     ↓
+Service
+     ↓
+Prisma
+     ↓
+PostgreSQL / Supabase
+Middleware
+Responsible for:
 
-Future AI functionality may be provided through:
+Authentication
 
-```text
-Backend
-   │
-   ▼
-AI Worker
-Python / FastAPI
-```
+JWT verification
 
-The AI worker is not treated as a dependency of the core application unless explicitly documented as such.
+Attaching authenticated identity
 
----
+Request-level concerns
 
-## 4. Frontend
+Authentication identity comes from:
 
-### Technology
+text
+req.userId
+Client-supplied user IDs must never be trusted for authorization.
 
-* Next.js
-* React
-* TypeScript
-* Tailwind CSS
-* App Router
+Controllers
+Controllers are HTTP orchestration layers.
 
-Primary frontend location:
+Controllers are responsible for:
 
-```text
+Reading request parameters
+
+Reading request bodies
+
+Reading authenticated identity
+
+Calling the appropriate service
+
+Translating service results into HTTP responses
+
+Translating validation/errors where necessary
+
+Controllers MUST NOT become the authoritative location for business rules.
+
+Controllers should not directly perform business mutations through Prisma when an appropriate service exists.
+
+Services
+Services are the primary authoritative location for domain/business rules.
+
+Services are responsible for:
+
+Ownership verification
+
+Authorization-related domain checks
+
+Relationship integrity
+
+State transitions
+
+Business constraints
+
+Financial rules
+
+Archive/restore behavior
+
+Domain mutations
+
+Coordinating related operations
+
+SSOT Rule
+Every business rule must have one authoritative implementation.
+
+Do not implement the same rule independently in:
+
+text
+Controller + Service + Frontend
+The frontend may provide UX validation, but the backend service remains authoritative.
+
+5. Service-Layer SSOT Pattern
+Preferred:
+
+text
+Controller
+    ↓
+Service
+    ↓
+Prisma
+Example:
+
+text
+activateLease()
+terminateLease()
+restoreLease()
+endLease()
+These service functions are authoritative for lease state transitions.
+
+The controller should request the transition rather than independently implementing the transition rules.
+
+6. Mutation SSOT Rule
+Meaningful domain mutations should have a single authoritative service function.
+
+Examples:
+
+text
+Property
+├── createProperty()
+├── updateProperty()
+├── archiveProperty()
+└── restoreProperty()
+
+Unit
+├── createUnit()
+├── updateUnit()
+├── archive/deleteUnit()
+└── restoreUnit()
+
+Tenant
+├── createTenant()
+├── updateTenant()
+├── archiveTenant()
+└── restoreTenant()
+
+Lease
+├── createLease()
+├── updateLease()
+├── activateLease()
+├── terminateLease()
+├── restoreLease()
+└── endLease()
+
+Payment
+├── createPayment()
+└── controlled payment mutation / void workflow
+If a controller currently bypasses one of these service operations and directly accesses Prisma, that is considered SSOT technical debt and should be consolidated before major feature expansion.
+
+7. Authorization SSOT
+Every protected domain operation must enforce ownership using the authenticated user.
+
+Ownership examples:
+
+text
+Property → Property.userId
+
+Unit → Unit.property.userId
+
+Tenant → Tenant.userId
+
+Lease → Lease.property.userId
+
+Payment → Payment.lease.property.userId
+The service layer must not rely solely on a controller having performed an ownership check.
+
+A service accepting:
+
+ts
+(id, userId)
+must actually use userId when determining whether the resource belongs to that user.
+
+A parameter that exists but is not used for authorization is an SSOT/security defect.
+
+8. Frontend Architecture
+Technology
+Next.js
+
+React
+
+TypeScript
+
+Tailwind CSS
+
+App Router
+
+Primary location:
+
+text
 frontend/src/
-```
-
-### Major areas
-
-```text
+Major Areas
+text
 frontend/src/
 ├── app/
 ├── components/
 ├── context/
+├── features/
 ├── lib/
-└── services/
-```
-
-### Authentication
-
+├── services/
+└── types/
+Authentication
 Authentication state is managed through:
 
-```text
+text
 context/AuthContext.tsx
-```
+Authentication utilities are in:
 
-Authentication utilities are located in:
-
-```text
+text
 lib/auth.ts
-```
+Current storage:
 
-The current implementation stores:
+JWT token
 
-* JWT token
-* User information
+User information
 
-in browser `localStorage`.
+stored in browser localStorage.
 
-The frontend uses route-level/client-side protection through:
+9. Frontend API Architecture
+Primary API abstraction:
 
-```text
-components/AuthGuard.tsx
-app/(app)/layout.tsx
-```
-
----
-
-## 5. Frontend API Architecture
-
-The primary API abstraction is:
-
-```text
+text
 frontend/src/services/api.ts
-```
-
 It provides:
 
-```text
+text
 api.get()
 api.post()
 api.put()
 api.patch()
 api.delete()
-```
+Responsibilities:
 
-Responsibilities include:
+API base URL handling
 
-* API base URL handling
-* Authorization header injection
-* GET request deduplication
-* HTTP error handling
-* 401/session-expiration handling
-* JSON parsing
-* request cancellation support
+Authorization header injection
 
-The API base URL is controlled by:
+GET request deduplication
 
-```text
+HTTP error handling
+
+401/session-expiration handling
+
+JSON parsing
+
+Request cancellation support
+
+API base URL:
+
+text
 NEXT_PUBLIC_API_URL
-```
+The base URL must not include /api.
 
-The base URL must not include `/api` when service endpoints already contain `/api`.
+Correct:
 
-Correct pattern:
-
-```text
-NEXT_PUBLIC_API_URL=https://propmanagerpro-production.up.railway.app
-```
-
-Endpoint:
-
-```text
-/api/properties
-```
-
-Result:
-
-```text
-https://propmanagerpro-production.up.railway.app/api/properties
-```
-
+text
+https://propmanagerpro-production.up.railway.app
 Avoid:
 
-```text
-https://.../api/api/properties
-```
+text
+https://.../api/api/...
+10. API Client Duplication
+Current files:
 
----
-
-## 6. API Client Duplication
-
-The repository currently contains:
-
-```text
+text
 frontend/src/lib/api-client.ts
 frontend/src/services/api.ts
-```
+services/api.ts is the operational API abstraction.
 
-`services/api.ts` is the more capable API abstraction and is the primary service-layer client.
+lib/api-client.ts appears unused.
 
-`lib/api-client.ts` is currently not referenced by the rest of the frontend according to repository searches performed during documentation review.
+Do not treat it as a second architecture.
 
-It should not be treated as a second competing API architecture.
-
-Future cleanup should either:
-
-1. Remove `lib/api-client.ts`, or
-2. Explicitly establish it as the single API abstraction and migrate all consumers.
+Future cleanup should either remove it or explicitly migrate all consumers to it.
 
 Until then:
 
-> `frontend/src/services/api.ts` is the operational frontend API client.
+frontend/src/services/api.ts is the operational frontend API client.
 
----
-
-## 7. Backend
-
-### Technology
-
-* Node.js
-* Express
-* TypeScript
-* Prisma ORM
-* PostgreSQL
-* Zod
-* JWT
-* bcrypt
-* Helmet
-* express-rate-limit
-* Pino / pino-http
-
-Primary location:
-
-```text
-backend/src/
-```
-
-Major layers:
-
-```text
-backend/src/
-├── config/
-├── controllers/
-├── middleware/
-├── routes/
-├── services/
-├── lib/
-├── types/
-└── tests/
-```
-
----
-
-## 8. Backend Layer Responsibilities
-
-### Routes
-
-Routes define HTTP endpoints and connect requests to controllers.
-
-Examples:
-
-```text
-/api/auth
-/api/properties
-/api/units
-/api/tenants
-/api/leases
-/api/payments
-/api/finance
-```
-
-### Controllers
-
-Controllers handle:
-
-* HTTP request/response behavior
-* Input extraction
-* Calling business services
-* HTTP status codes
-* Error responses
-
-### Services
-
-Services contain business logic and database operations.
-
-This separation prevents business rules from being embedded directly in route definitions.
-
-### Middleware
-
-Middleware handles cross-cutting concerns including:
-
-* Authentication
-* Error handling
-* Security
-* Request processing
-
----
-
-## 9. Authentication Architecture
-
+11. Authentication Architecture
 Authentication uses:
 
-```text
+text
 bcrypt
 JWT
-```
-
 Registration:
 
-```text
+text
 Frontend
    ↓
 POST /api/auth/register
    ↓
-Backend controller
+Auth controller
    ↓
 Auth service
    ↓
@@ -365,93 +359,114 @@ User creation
 JWT generation
    ↓
 Frontend
-```
+Login follows the same pattern.
 
-Login follows the same general pattern.
+JWT payload:
 
-JWT payload currently contains:
-
-```text
+text
 userId
 email
 role
-```
+Token lifetime:
 
-Tokens currently expire after:
-
-```text
+text
 7 days
-```
+Protected requests:
 
-The frontend stores the token and sends:
-
-```http
+http
 Authorization: Bearer <token>
-```
+12. Lease State Machine
+Authoritative lease states:
 
-The backend authentication middleware validates the token before allowing protected operations.
+text
+PENDING
+ACTIVE
+ENDED
+TERMINATED
+There is no current EXPIRED state.
 
----
+There is no current isActive field.
 
-## 10. Multi-Tenant Security
+Transitions:
 
-PropManager Pro is designed as a multi-tenant SaaS.
+text
+PENDING
+   │
+   │ activate
+   ↓
+ACTIVE
+   │
+   ├── terminate → TERMINATED
+   │
+   └── end       → ENDED
+Restoration:
 
-The authenticated user's identity is extracted from the JWT.
+text
+TERMINATED → ACTIVE
+provided no conflicting active lease exists.
 
-The backend uses:
+13. Multi-Tenant Security
+PropManager Pro is multi-tenant.
 
-```text
+Authenticated identity:
+
+text
 req.userId
-```
+Ownership:
 
-to scope user-owned resources.
+text
+User
+ │
+ ├── Property.userId
+ │
+ └── Tenant.userId
 
-Business resources must not be retrieved solely by an arbitrary resource ID.
+Property
+ │
+ └── Units
 
-The authorization pattern should be:
+Unit
+ │
+ └── Leases
 
-```text
-authenticated user
-        ↓
-userId
-        ↓
-owned resource
-        ↓
-requested operation
-```
+Tenant
+ │
+ └── Leases
 
-This prevents one user from accessing another user's properties, units, tenants, leases, payments, or financial information.
+Lease
+ │
+ └── Payments
+Non-negotiable rule:
 
----
+Never trust a resource ID alone when retrieving or modifying protected tenant-owned data.
 
-## 11. Database
+14. Database
+ORM:
 
-Prisma is the ORM.
-
+text
+Prisma
 Database:
 
-```text
+text
 PostgreSQL
-```
+Host:
 
-Hosted through:
-
-```text
+text
 Supabase
-```
+Schema location:
 
-Database schema is maintained through Prisma.
+text
+backend/prisma/schema.prisma
+Migrations:
 
-Database implementation must always be considered the authoritative source for actual database structure.
+text
+backend/prisma/migrations/
+Database schema is implementation truth.
 
----
+15. Business Modules
+Current core modules:
 
-## 12. Business Modules
-
-Current core modules include:
-
-```text
+text
 Authentication
 Properties
 Units
@@ -459,225 +474,241 @@ Tenants
 Leases
 Payments
 Finance
-```
+Audit
+16. Finance Architecture
+Finance endpoints include:
 
-Business rules already established include:
-
-* Lease overlap prevention
-* Active lease validation
-* Payment void-only policy
-* Finance calculations
-* Zod validation
-* Multi-user data isolation
-
----
-
-## 13. Finance Architecture
-
-Finance functionality is exposed through dedicated endpoints including:
-
-```text
+text
 /api/finance/dashboard
 /api/finance/revenue-by-property
 /api/finance/outstanding-rent
-```
+Rules:
 
-Financial calculations must prioritize correctness over convenience.
+Financial calculations must prioritize correctness.
 
-Financial records should not be silently modified in ways that destroy historical accuracy.
+Financial records must not be silently destroyed.
 
----
+Finance analytics must remain user-scoped.
 
-## 14. Deployment Architecture
+financeAnalytics.service.ts is the current database-backed calculation source.
 
-### Backend
+Placeholder finance.service.ts must not be treated as authoritative.
 
-Hosted on:
+17. Audit Logging
+Important domain mutations should produce audit records.
 
-```text
-Railway
-```
+Current service:
 
-The production backend uses:
+text
+audit.service.ts
+Audit fields:
 
-```text
-Node.js
-Express
-Prisma
-PostgreSQL / Supabase
-```
+userId
 
-Production startup currently runs:
+action
 
-```text
-npx prisma migrate deploy
-node dist/server.js
-```
+entity
 
-### Frontend
+entityId
 
-Deployment target:
+metadata
 
-```text
-Vercel
-```
+timestamp
 
-The frontend communicates with the production Railway backend through:
+Future hardening should prefer transactional mutation + audit where required.
 
-```text
-NEXT_PUBLIC_API_URL
-```
+Preferred:
 
----
+text
+BEGIN TRANSACTION
+    domain mutation
+    audit record
+COMMIT
+18. Soft Delete
+Soft delete uses:
 
-## 15. Health and Startup Checks
+text
+deletedAt
+for:
 
-The backend exposes:
+Properties
 
-```text
-/health
-```
+Units
 
-Startup validation performs a database connectivity test using:
+Tenants
 
-```text
-SELECT 1
-```
+Rules:
 
-Startup checks are currently non-blocking.
+Soft-deleted records normally excluded from active queries.
 
-This means the server can begin listening while startup validation reports failures through logging.
+Historical financial/lease data must be preserved.
 
-This behavior should be reviewed during production hardening.
+Hard deletion only where explicitly justified.
 
----
+19. Deployment Architecture
+text
+Frontend → Vercel
+Backend  → Railway
+Database → Supabase PostgreSQL
+Current backend start:
 
-## 16. Configuration
+text
+npx prisma migrate deploy && node dist/server.js
+Current backend scripts:
 
-Backend configuration is validated through:
+text
+dev: ts-node-dev --respawn --transpile-only src/server.ts
+build: tsc
+start: npx prisma migrate deploy && node dist/server.js
+postinstall: prisma generate
+Known issues:
 
-```text
-backend/src/config/env.ts
-```
+postinstall Prisma generation is implicit.
 
-Required values include:
+Migration is coupled to application startup.
 
-```text
+Railway subscription expired.
+
+Production deployment requires re-establishment.
+
+20. Environment Configuration
+Backend validates:
+
+text
 DATABASE_URL
 JWT_SECRET
 PORT
 NODE_ENV
-```
+JWT_SECRET minimum length:
 
-`JWT_SECRET` requires a minimum length of 32 characters.
+text
+32 characters
+Frontend:
 
-Frontend configuration includes:
-
-```text
+text
 NEXT_PUBLIC_API_URL
+Known gap:
+
+text
+FRONTEND_URL is used for CORS but not validated by env.ts
+21. Type Safety
+Avoid any in domain services.
+
+Known debt:
+
+ts
+data: any
+tx?: any
+particularly in unit.service.ts.
+
+Target:
+
+text
+Explicit domain input types
+↓
+Typed service functions
+↓
+Typed Prisma operations
+22. Known Architecture Debt
+Area	Problem	Priority
+Lease	deleteLease() does not independently enforce ownership	P0
+Lease	Some ownership/business checks remain in controller	P1
+Property	Archive/restore logic bypasses property service	P1
+Unit	Archive/restore logic bypasses unit service	P1
+Tenant	Archive/restore logic duplicated between controller/service	P1
+Unit	any types	P1
+Payment	Validation/business rules need consolidation	P1
+Audit	Mutation + audit not consistently transactional	P1
+Property	unitCount semantic drift	P1
+Finance	Placeholder/static finance service exists	P1
+23. Architectural Refactoring Rule
+Do not perform a broad rewrite.
+
+Refactor incrementally:
+
+text
+Lease
+  ↓
+Property
+  ↓
+Unit
+  ↓
+Tenant
+  ↓
+Payment
+  ↓
+Finance
+  ↓
+Audit
+For each domain:
+
+text
+Inspect
+↓
+Identify duplicated rules
+↓
+Choose authoritative service implementation
+↓
+Move logic
+↓
+Remove controller duplication
+↓
+Type it
+↓
+Test
+↓
+Verify
+↓
+Update documentation
+↓
+LOCK
+↓
+Next domain
+24. AI Engineering Rule
+For every meaningful change:
+
+text
+Inspect implementation
+↓
+Form hypothesis
+↓
+Make smallest safe change
+↓
+Test
+↓
+Verify
+↓
+Assess documentation impact
+↓
+Update affected SSOT documents
+↓
+Continue
+Never make unrelated changes merely because they appear while working on another issue.
+
+25. Architecture Lock Rule
+When a major architectural change or domain refactor is completed and verified:
+
+text
+IMPLEMENTED
+     ↓
+TESTED
+     ↓
+VERIFIED
+     ↓
+DOCUMENTED
+     ↓
+🔒 LOCKED
+A locked state means:
+
+The current architecture is the working baseline.
+
+Do not casually reopen the completed work.
+
+Any later change that alters the locked architecture requires an explicit new decision.
+
+Continue to the next planned domain/work item.
+
+Locking does not mean the code can never change. It means the current verified architecture becomes the baseline for subsequent work.
+
+End of ARCHITECTURE.md
 ```
-
-Production secrets must never be committed to Git.
-
----
-
-## 17. Build and Deployment Philosophy
-
-PropManager Pro follows an explicit and deterministic deployment philosophy.
-
-Production-critical steps should not depend on undocumented or accidental lifecycle behavior.
-
-The preferred pattern is:
-
-```text
-install
-→ generate Prisma client
-→ compile TypeScript
-→ deploy
-→ start
-```
-
-The repository currently contains a Prisma `postinstall` hook.
-
-This is recognized as a potential reliability concern because production builds should explicitly perform critical generation steps.
-
-Future build cleanup should prefer explicit commands such as:
-
-```text
-npm ci
-npx prisma generate
-npm run build
-```
-
-rather than depending on implicit lifecycle execution.
-
----
-
-## 18. AI-First Engineering Model
-
-AI is an intentional part of the engineering workflow.
-
-The system should therefore favor:
-
-* Small modules
-* Explicit dependencies
-* Predictable file locations
-* Strong naming
-* Clear business rules
-* Type safety
-* Deterministic commands
-* Documentation of important decisions
-* Tests around critical business behavior
-
-The architecture should remain understandable to both humans and AI assistants.
-
----
-
-## 19. Architectural Rule
-
-When adding functionality:
-
-```text
-Do not add complexity merely because it is technically possible.
-```
-
-Every new feature should answer:
-
-1. What user problem does it solve?
-2. Does it belong in the current MVP?
-3. Does it introduce new security risks?
-4. Does it affect financial correctness?
-5. Does it require a database change?
-6. Can it be tested?
-7. Can another developer or AI understand it later?
-
----
-
-## 20. Current Architectural Direction
-
-PropManager Pro should continue evolving toward:
-
-```text
-Simple
-→ Reliable
-→ Secure
-→ Maintainable
-→ Testable
-→ Scalable
-```
-
-not:
-
-```text
-Feature-rich
-→ Complex
-→ Fragile
-```
-
-The architecture must support the product principle:
-
-> Build the simplest reliable property-management system that solves the real problems of small landlords.
-
----
-
-**End of `ARCHITECTURE.md`**
