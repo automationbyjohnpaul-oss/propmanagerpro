@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "../../src/lib/prisma";
-import { createTenant, archiveTenant } from "../../src/services/tenant.service";
+import {
+  createTenant,
+  archiveTenant,
+  deleteTenant,
+} from "../../src/services/tenant.service";
 import { ConflictError } from "../../src/lib/errors";
 
 describe("Tenant Service - Archive", () => {
@@ -156,6 +160,228 @@ describe("Tenant Service - Archive", () => {
     );
 
     // Clean up
+    await prisma.tenant.delete({ where: { id: otherTenant.id } });
+    await prisma.user.delete({ where: { id: otherUser.id } });
+  });
+});
+
+// ============================================
+// HARD DELETE TESTS
+// ============================================
+
+describe("Tenant Service - Hard Delete", () => {
+  let testUserId: string;
+  let testPropertyId: string;
+  let testUnitId: string;
+
+  beforeAll(async () => {
+    const timestamp = Date.now();
+    const testEmail = `hard-delete-${timestamp}@example.com`;
+
+    // Clean up any existing test data
+    await prisma.user.deleteMany({ where: { email: testEmail } });
+
+    const user = await prisma.user.create({
+      data: {
+        email: testEmail,
+        password: "hashed",
+        name: "Hard Delete Test User",
+      },
+    });
+    testUserId = user.id;
+
+    const property = await prisma.property.create({
+      data: {
+        name: "Hard Delete Test Property",
+        address: "789 Test St",
+        city: "Test City",
+        state: "TS",
+        zip: "12345",
+        unitCount: 2,
+        userId: testUserId,
+      },
+    });
+    testPropertyId = property.id;
+
+    const unit = await prisma.unit.create({
+      data: {
+        unitNumber: "HD-1",
+        propertyId: testPropertyId,
+        bedrooms: 1,
+        bathrooms: 1,
+        rentAmount: 1000,
+      },
+    });
+    testUnitId = unit.id;
+  });
+
+  afterAll(async () => {
+    if (testUnitId) {
+      await prisma.unit.delete({ where: { id: testUnitId } });
+    }
+    if (testPropertyId) {
+      await prisma.property.delete({ where: { id: testPropertyId } });
+    }
+    if (testUserId) {
+      await prisma.user.delete({ where: { id: testUserId } });
+    }
+  });
+
+  it("should hard delete a tenant with no lease history", async () => {
+    const tenant = await createTenant(
+      {
+        firstName: "NoLease",
+        lastName: "Tenant",
+        email: `nolease-${Date.now()}@example.com`,
+      },
+      testUserId,
+    );
+
+    const deleted = await deleteTenant(tenant.id, testUserId);
+
+    expect(deleted.id).toBe(tenant.id);
+
+    const remaining = await prisma.tenant.findUnique({
+      where: { id: tenant.id },
+    });
+
+    expect(remaining).toBeNull();
+  });
+
+  it("should reject hard delete when tenant has ACTIVE lease history", async () => {
+    const tenant = await createTenant(
+      {
+        firstName: "ActiveLease",
+        lastName: "Tenant",
+        email: `active-lease-${Date.now()}@example.com`,
+      },
+      testUserId,
+    );
+
+    const lease = await prisma.lease.create({
+      data: {
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        monthlyRent: 1000,
+        securityDeposit: 1000,
+        status: "ACTIVE",
+        propertyId: testPropertyId,
+        unitId: testUnitId,
+        tenantId: tenant.id,
+      },
+    });
+
+    await expect(deleteTenant(tenant.id, testUserId)).rejects.toThrow(
+      ConflictError,
+    );
+
+    await expect(deleteTenant(tenant.id, testUserId)).rejects.toThrow(
+      "Cannot delete tenant with lease history. Archive the tenant instead.",
+    );
+
+    await prisma.lease.delete({ where: { id: lease.id } });
+    await prisma.tenant.delete({ where: { id: tenant.id } });
+  });
+
+  it("should reject hard delete when tenant has ENDED lease history", async () => {
+    const tenant = await createTenant(
+      {
+        firstName: "EndedLease",
+        lastName: "Tenant",
+        email: `ended-lease-${Date.now()}@example.com`,
+      },
+      testUserId,
+    );
+
+    const lease = await prisma.lease.create({
+      data: {
+        startDate: new Date("2025-01-01"),
+        endDate: new Date("2025-12-31"),
+        monthlyRent: 1000,
+        securityDeposit: 1000,
+        status: "ENDED",
+        propertyId: testPropertyId,
+        unitId: testUnitId,
+        tenantId: tenant.id,
+      },
+    });
+
+    await expect(deleteTenant(tenant.id, testUserId)).rejects.toThrow(
+      ConflictError,
+    );
+
+    await prisma.lease.delete({ where: { id: lease.id } });
+    await prisma.tenant.delete({ where: { id: tenant.id } });
+  });
+
+  it("should allow hard delete when lease history belongs to another tenant", async () => {
+    const tenantToDelete = await createTenant(
+      {
+        firstName: "DeleteMe",
+        lastName: "Tenant",
+        email: `delete-me-${Date.now()}@example.com`,
+      },
+      testUserId,
+    );
+
+    const otherTenant = await createTenant(
+      {
+        firstName: "Other",
+        lastName: "Tenant",
+        email: `other-tenant-${Date.now()}@example.com`,
+      },
+      testUserId,
+    );
+
+    const lease = await prisma.lease.create({
+      data: {
+        startDate: new Date("2025-01-01"),
+        endDate: new Date("2025-12-31"),
+        monthlyRent: 1000,
+        securityDeposit: 1000,
+        status: "ENDED",
+        propertyId: testPropertyId,
+        unitId: testUnitId,
+        tenantId: otherTenant.id,
+      },
+    });
+
+    const deleted = await deleteTenant(tenantToDelete.id, testUserId);
+
+    expect(deleted.id).toBe(tenantToDelete.id);
+
+    await prisma.lease.delete({ where: { id: lease.id } });
+    await prisma.tenant.delete({ where: { id: otherTenant.id } });
+  });
+
+  it("should reject hard delete when tenant does not exist", async () => {
+    await expect(deleteTenant("non-existent-id", testUserId)).rejects.toThrow(
+      "Tenant not found",
+    );
+  });
+
+  it("should reject hard delete for another user's tenant", async () => {
+    const otherUser = await prisma.user.create({
+      data: {
+        email: `hard-delete-other-${Date.now()}@example.com`,
+        password: "hashed",
+        name: "Other User",
+      },
+    });
+
+    const otherTenant = await createTenant(
+      {
+        firstName: "Other",
+        lastName: "User",
+        email: `other-user-${Date.now()}@example.com`,
+      },
+      otherUser.id,
+    );
+
+    await expect(deleteTenant(otherTenant.id, testUserId)).rejects.toThrow(
+      "Tenant not found",
+    );
+
     await prisma.tenant.delete({ where: { id: otherTenant.id } });
     await prisma.user.delete({ where: { id: otherUser.id } });
   });

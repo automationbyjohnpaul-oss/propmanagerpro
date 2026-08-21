@@ -152,7 +152,7 @@ export async function deleteTenant(id: string, userId: string) {
   });
 
   if (leaseCount > 0) {
-    throw new Error(
+    throw new ConflictError(
       "Cannot delete tenant with lease history. Archive the tenant instead.",
     );
   }
