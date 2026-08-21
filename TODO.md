@@ -8,22 +8,45 @@ Current implementation status belongs in `PROJECT_STATE.md`.
 
 ---
 
+# Completed
+
+## P2.1 — Move Business Rules to Service Layer ✅ COMPLETE
+
+- [x] Add `ConflictError` class
+- [x] Move tenant active-lease check to service
+- [x] Move unit active-lease check to service
+- [x] Remove controller active-lease checks
+- [x] Add tenant service archive tests
+- [x] Add unit service archive tests
+- [x] Remove obsolete manual test script
+- [x] Verify full test suite
+- [x] TypeScript check
+- [x] Documentation update
+
+---
+
 # Immediate Priority
 
-## Phase 5.2 — Production Hardening
+## P2.2 — Standardize Hard-Delete Business Rules and Active-Lease Definition
 
-Continue production hardening after deployment validation.
+### P2.2a — Unit Hard Delete
 
-Priority areas:
+- [ ] Move lease-history protection completely into `hardDeleteUnit`.
+- [ ] Remove duplicate lease-history check from the controller.
+- [ ] Add service-layer tests.
 
-* CORS verification
-* Rate limiting verification
-* Structured logging verification
-* Security headers verification
-* Authentication failure handling
-* Production environment validation
-* Error handling
-* Reliability testing
+### P2.2b — Tenant Hard Delete
+
+- [ ] Verify current tenant hard-delete lease-history rule.
+- [ ] Ensure the rule is enforced exclusively by the service layer.
+- [ ] Add service-layer tests.
+
+### P2.2c — Active Lease Definition
+
+- [ ] Review all active-lease checks across the backend.
+- [ ] Define the authoritative active-lease business rule.
+- [ ] Standardize service-layer implementations.
+- [ ] Add regression tests for the standardized definition.
 
 ---
 

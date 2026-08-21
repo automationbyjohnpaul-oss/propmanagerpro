@@ -9,7 +9,20 @@ For current status, use `PROJECT_STATE.md`.
 ---
 
 # 2026
+## P2.1 — Move Business Rules to Service Layer (August 2026)
 
+- Added `AppError` and `ConflictError` classes.
+- Moved tenant active-lease archive protection from controller to service.
+- Moved unit active-lease archive protection from controller to service.
+- Removed duplicated active-lease checks from controllers.
+- Added tenant service archive tests (4 tests).
+- Added unit service archive tests (4 tests).
+- Removed obsolete manual unit test script from `src/tests/`.
+- Verified full backend test suite: 28/28 tests passing.
+- Verified TypeScript compilation with no errors.
+- Verified `git diff --check` clean.
+
+---
 ## v0.2.0 — Authentication & Multi-Tenant Security
 
 ### Added

@@ -1,6 +1,6 @@
 # PropManager Pro — Project State
 
-**Last Updated:** August 20, 2026
+**Last Updated:** August 21, 2026
 
 **State:** 🔒 LOCKED — Documentation / SSOT Architecture Baseline
 
@@ -404,7 +404,7 @@ NEXT DOMAIN
 Do not begin the next domain while the current domain remains unverified.
 
 14. Current Immediate Objective
-Next action: A1 — Lease SSOT consolidation.
+Next action: P2.2 — Standardize Hard-Delete Business Rules and Active-Lease Definition.
 
 Before changing code:
 
@@ -472,26 +472,25 @@ text
 Documentation architecture     → 🔒 LOCKED
 SSOT principle                 → 🔒 LOCKED
 Backend layered architecture   → 🔒 LOCKED
-Lease SSOT consolidation       → 🟡 NEXT
-Property SSOT                  → ⚪ WAITING
-Unit SSOT                      → ⚪ WAITING
-Tenant SSOT                    → ⚪ WAITING
-Payment SSOT                   → ⚪ WAITING
+Lease SSOT consolidation       → 🔒 LOCKED
+Property SSOT                  → 🔒 LOCKED
+Unit SSOT                      → 🔒 LOCKED
+Tenant SSOT                    → 🔒 LOCKED
+Payment SSOT                   → 🔒 LOCKED
+P2.1 Business Rules to Service → 🔒 LOCKED
+P2.2 Hard-Delete Rules         → 🟡 READY / NEXT
 Finance SSOT                   → ⚪ WAITING
 Audit SSOT                     → ⚪ WAITING
-Production redeployment       → ⚪ WAITING
+Production redeployment        → ⚪ WAITING
 18. Continuation Instruction
+
 The next AI/session must NOT jump directly into unrelated feature development.
 
-Continue from:
-
-A1 — Lease SSOT consolidation
+Continue from: P2.2 — Standardize Hard-Delete Business Rules and Active-Lease Definition.
 
 Inspect the current implementation first.
 
 Do not assume that documentation is more accurate than the code.
-
-Do not modify Property, Unit, Tenant, Payment, Finance, or Audit architecture until the Lease domain has been completed, verified, documented, and locked.
 
 19. Evidence Status
 Project documentation uses:
@@ -589,10 +588,10 @@ Tenant isolation:
 Authenticated user ownership boundaries
 
 Current phase:
-SSOT Backend Consolidation
+P2.2 READY / NEXT
 
 Next engineering action:
-A1 — Lease SSOT consolidation
+P2.2 — Standardize Hard-Delete Business Rules and Active-Lease Definition
 
 Primary unresolved areas:
 Railway redeployment required

@@ -1,6 +1,6 @@
 # PropManager Pro — Architecture
 
-**Last Updated:** August 20, 2026
+**Last Updated:** August 21, 2026
 **Architecture State:** 🔒 LOCKED — SSOT Architecture Baseline
 **Current Focus:** SSOT Enforcement / Backend Architecture Consolidation
 
@@ -610,17 +610,24 @@ Typed service functions
 ↓
 Typed Prisma operations
 22. Known Architecture Debt
-Area	Problem	Priority
-Lease	deleteLease() does not independently enforce ownership	P0
-Lease	Some ownership/business checks remain in controller	P1
-Property	Archive/restore logic bypasses property service	P1
-Unit	Archive/restore logic bypasses unit service	P1
-Tenant	Archive/restore logic duplicated between controller/service	P1
-Unit	any types	P1
-Payment	Validation/business rules need consolidation	P1
-Audit	Mutation + audit not consistently transactional	P1
-Property	unitCount semantic drift	P1
-Finance	Placeholder/static finance service exists	P1
+
+| Area | Problem | Priority |
+|------|---------|----------|
+| Lease | `deleteLease()` does not independently enforce ownership | P0 |
+| Lease | Some ownership/business checks remain in controller | P1 |
+| Property | Archive/restore logic bypasses property service | P1 |
+| Unit | Hard-delete lease-history check remains duplicated between controller/service | P1 |
+| Tenant | Hard-delete business-rule consolidation remains incomplete | P1 |
+| Unit | `any` types in service layer | P1 |
+| Payment | Validation/business rules need consolidation | P1 |
+| Audit | Mutation + audit not consistently transactional | P1 |
+| Property | `unitCount` semantic drift | P1 |
+| Finance | Placeholder/static finance service exists | P1 |
+
+**Note:** P2.1 addressed the active-lease archive business-rule duplication for Unit and Tenant.
+The remaining Unit/Tenant debt now specifically relates to:
+- Hard-delete lease-history validation (P2.2a)
+- Standardization of the active-lease definition (P2.2c)
 23. Architectural Refactoring Rule
 Do not perform a broad rewrite.
 

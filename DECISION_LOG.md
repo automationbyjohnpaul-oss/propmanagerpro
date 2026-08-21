@@ -565,7 +565,61 @@ were made, what changed historically, and what is planned.
 ```
 
 ---
+## D-030 — Move Business Rules to Service Layer (P2.1)
 
+**Status:** 🟢 Implemented & Verified
+**Implementation:** ✅ P2.1 complete
+
+### Decision
+
+Business rules that protect domain invariants will be enforced in the
+service layer rather than duplicated inside controllers.
+
+### Reason
+
+Controllers should remain focused on HTTP orchestration. Business rules
+must remain consistent regardless of which application path invokes the
+service.
+
+Duplicating rules between controllers creates a risk that future callers
+or endpoints will bypass those rules.
+
+### P2.1 Implementation
+
+The following rules were moved into services:
+
+- Tenant archive → reject when an active lease exists.
+- Unit archive → reject when an active lease exists.
+
+Controllers now delegate these decisions to the corresponding services.
+
+### Error Handling
+
+`ConflictError` was introduced for business-rule conflicts and represents
+HTTP status 409.
+
+### Verification
+
+- TypeScript: 0 errors
+- Tenant service tests: 4/4 passed
+- Unit service tests: 4/4 passed
+- Payment service tests: 20/20 passed
+- Full Vitest suite: 28/28 passed
+
+### Deliberately Deferred
+
+The following related inconsistencies were identified but intentionally
+deferred to P2.2:
+
+- Hard-delete lease-history validation is duplicated for units.
+- Tenant hard-delete lease-history validation requires standardization.
+- The definition of an "active lease" is inconsistent between existing
+  service/controller logic.
+
+P2.1 preserves the existing active-lease definition rather than changing
+business behavior while restructuring code.
+
+---
 ## Template for New Decisions
 
 ```markdown
@@ -587,5 +641,5 @@ were made, what changed historically, and what is planned.
 
 _Last updated: August 2026_
 _Migrated and consolidated from two separate decision log versions._
-_Original decisions D-001 through D-020 preserved. Added D-021 through D-029_
+_Original decisions D-001 through D-020 preserved. Added D-021 through D-030_
 _from architecture audit session. Decision lifecycle and status markers added._
