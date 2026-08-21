@@ -210,7 +210,7 @@ export async function hardDeleteUnit(id: string, userId: string, tx?: any) {
   });
 
   if (leaseCount > 0) {
-    throw new Error(
+    throw new ConflictError(
       "Cannot delete unit with lease history. Archive it instead.",
     );
   }

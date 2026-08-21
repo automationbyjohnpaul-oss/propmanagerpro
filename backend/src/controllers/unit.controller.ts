@@ -202,18 +202,7 @@ export const deleteUnitHandler = asyncHandler(
       throw createError("Unit not found", 404);
     }
 
-    // Check if unit has any leases (business rule)
-    const leaseCount = await prisma.lease.count({
-      where: { unitId: unitId },
-    });
-
-    if (leaseCount > 0) {
-      throw createError(
-        "Cannot delete unit with lease history. Archive it instead.",
-        409,
-      );
-    }
-
+    // Business rule moved to hardDeleteUnit service
     // Use the hardDeleteUnit service which performs the actual deletion
     await hardDeleteUnit(unitId, userId);
 
