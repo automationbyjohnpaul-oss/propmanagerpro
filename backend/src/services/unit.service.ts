@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { ConflictError } from "../lib/errors";
 
 // ============================================
 // GET ALL UNITS (FILTERED)
@@ -137,7 +138,7 @@ export async function deleteUnit(id: string, userId: string, tx?: any) {
   });
 
   if (activeLease) {
-    throw new Error("Cannot archive unit with active lease");
+    throw new ConflictError("Cannot archive unit with active lease");
   }
 
   return client.unit.update({

@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { ConflictError } from "../lib/errors";
 
 export async function getAllTenants(userId: string, status?: string) {
   const where: any = { userId };
@@ -98,6 +99,21 @@ export async function archiveTenant(id: string, userId: string) {
   });
 
   if (!tenant) throw new Error("Tenant not found");
+
+  // ✅ Business rule: Check for active leases
+  const activeLease = await prisma.lease.findFirst({
+    where: {
+      tenantId: id,
+      status: "ACTIVE",
+      endDate: { gt: new Date() },
+    },
+  });
+
+  if (activeLease) {
+    throw new ConflictError(
+      "Cannot archive tenant with active lease. End lease first.",
+    );
+  }
 
   return prisma.tenant.update({
     where: { id },

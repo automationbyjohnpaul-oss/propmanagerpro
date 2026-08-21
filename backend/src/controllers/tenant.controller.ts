@@ -10,7 +10,6 @@ import {
 } from "../services/tenant.service";
 import { createAuditLog } from "../services/audit.service";
 import { asyncHandler } from "../middleware/asyncHandler";
-import { prisma } from "../lib/prisma";
 
 // ============================================
 // HELPERS
@@ -146,21 +145,6 @@ export const archiveTenantHandler = asyncHandler(
 
     if (!existingTenant) {
       throw createError("Tenant not found", 404);
-    }
-
-    const activeLease = await prisma.lease.findFirst({
-      where: {
-        tenantId,
-        status: "ACTIVE",
-        endDate: { gt: new Date() },
-      },
-    });
-
-    if (activeLease) {
-      throw createError(
-        "Cannot archive tenant with active lease. End lease first.",
-        409,
-      );
     }
 
     await archiveTenant(tenantId, userId);
