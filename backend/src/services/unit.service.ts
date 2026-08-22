@@ -133,7 +133,6 @@ export async function deleteUnit(id: string, userId: string, tx?: any) {
     where: {
       unitId: id,
       status: "ACTIVE",
-      endDate: { gt: new Date() },
     },
   });
 

@@ -123,6 +123,50 @@ describe("Unit Service - Archive", () => {
     await prisma.unit.delete({ where: { id: unit.id } });
   });
 
+  it("should reject archive when unit has ACTIVE lease with past endDate", async () => {
+    const unit = await createUnit(testUserId, {
+      unitNumber: "PAST-ENDDATE",
+      propertyId: testPropertyId,
+      bedrooms: 1,
+      bathrooms: 1,
+      rentAmount: 1000,
+    });
+
+    const tenant = await prisma.tenant.create({
+      data: {
+        firstName: "PastEndDate",
+        lastName: "Unit",
+        email: `past-enddate-unit-${Date.now()}@example.com`,
+        userId: testUserId,
+      },
+    });
+
+    // Create an ACTIVE lease with endDate in the past
+    const lease = await prisma.lease.create({
+      data: {
+        startDate: new Date("2025-01-01"),
+        endDate: new Date("2025-12-31"), // Past date
+        monthlyRent: 1000,
+        securityDeposit: 1000,
+        status: "ACTIVE",
+        propertyId: testPropertyId,
+        unitId: unit.id,
+        tenantId: tenant.id,
+      },
+    });
+
+    const result = deleteUnit(unit.id, testUserId);
+
+    await expect(result).rejects.toThrow(ConflictError);
+    await expect(result).rejects.toThrow(
+      "Cannot archive unit with active lease",
+    );
+
+    await prisma.lease.delete({ where: { id: lease.id } });
+    await prisma.tenant.delete({ where: { id: tenant.id } });
+    await prisma.unit.delete({ where: { id: unit.id } });
+  });
+
   it("should throw error when unit not found", async () => {
     await expect(deleteUnit("non-existent-id", testUserId)).rejects.toThrow(
       "Unit not found",

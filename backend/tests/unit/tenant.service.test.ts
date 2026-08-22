@@ -128,6 +128,42 @@ describe("Tenant Service - Archive", () => {
     await prisma.tenant.delete({ where: { id: tenant.id } });
   });
 
+  it("should reject archive when tenant has ACTIVE lease with past endDate", async () => {
+    const timestamp = Date.now();
+    const tenant = await createTenant(
+      {
+        firstName: "PastEndDate",
+        lastName: "Tenant",
+        email: `past-enddate-${timestamp}@example.com`,
+      },
+      testUserId,
+    );
+
+    // Create an ACTIVE lease with endDate in the past
+    const lease = await prisma.lease.create({
+      data: {
+        startDate: new Date("2025-01-01"),
+        endDate: new Date("2025-12-31"), // Past date
+        monthlyRent: 1000,
+        securityDeposit: 1000,
+        status: "ACTIVE",
+        propertyId: testPropertyId,
+        unitId: testUnitId,
+        tenantId: tenant.id,
+      },
+    });
+
+    const result = archiveTenant(tenant.id, testUserId);
+
+    await expect(result).rejects.toThrow(ConflictError);
+    await expect(result).rejects.toThrow(
+      "Cannot archive tenant with active lease. End lease first.",
+    );
+
+    await prisma.lease.delete({ where: { id: lease.id } });
+    await prisma.tenant.delete({ where: { id: tenant.id } });
+  });
+
   it("should throw error when tenant not found", async () => {
     await expect(archiveTenant("non-existent-id", testUserId)).rejects.toThrow(
       "Tenant not found",

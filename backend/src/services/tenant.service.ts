@@ -105,7 +105,6 @@ export async function archiveTenant(id: string, userId: string) {
     where: {
       tenantId: id,
       status: "ACTIVE",
-      endDate: { gt: new Date() },
     },
   });
 
