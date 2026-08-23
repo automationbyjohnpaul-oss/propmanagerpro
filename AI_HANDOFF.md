@@ -1,4 +1,4 @@
-# PropManager Pro — AI Handoff
+# PropManager Pro -- AI Handoff
 
 ## Purpose
 
@@ -14,7 +14,7 @@ A new AI session should use this document to understand the project's operating 
 
 **PropManager Pro**
 
-Mobile-first property management SaaS for small landlords managing approximately 1–10 units.
+Mobile-first property management SaaS for small landlords managing approximately 1-10 units.
 
 Core philosophy:
 
@@ -26,21 +26,21 @@ Core philosophy:
 
 ```text
 PropManager Pro/
-├── PROJECT_STATE.md
-├── ARCHITECTURE.md
-├── DECISION_LOG.md
-├── CHANGELOG.md
-├── TODO.md
-├── AI_HANDOFF.md
-├── README.md
-│
-├── DOCS/
-├── frontend/
-├── backend/
-├── ai_worker/
-├── database/
-├── config/
-└── tests/
++-- PROJECT_STATE.md
++-- ARCHITECTURE.md
++-- DECISION_LOG.md
++-- CHANGELOG.md
++-- TODO.md
++-- AI_HANDOFF.md
++-- README.md
+|
++-- DOCS/
++-- frontend/
++-- backend/
++-- ai_worker/
++-- database/
++-- config/
++-- tests/
 ```
 
 The actual filesystem is always the implementation truth.
@@ -77,9 +77,9 @@ Not every documented or planned directory is necessarily implemented.
 ## Hosting
 
 ```text
-Frontend → Vercel
-Backend  → Railway
-Database → Supabase PostgreSQL
+Frontend -> Vercel
+Backend  -> Railway
+Database -> Supabase PostgreSQL
 ```
 
 Current platform status must be verified before being treated as current deployment truth.
@@ -108,17 +108,23 @@ Current documented flow:
 
 ```text
 Register/Login
-      ↓
+      |
+      v
 Backend
-      ↓
+      |
+      v
 bcrypt
-      ↓
+      |
+      v
 JWT
-      ↓
+      |
+      v
 Frontend localStorage
-      ↓
+      |
+      v
 Bearer token
-      ↓
+      |
+      v
 Protected API
 ```
 
@@ -213,7 +219,7 @@ Tenant isolation must be preserved in every new feature and modification.
 
 # Current Deployment State
 
-⚪ **UNVERIFIED — requires re-establishment before being treated as current**
+[UNVERIFIED] **UNVERIFIED -- requires re-establishment before being treated as current**
 
 The Railway backend previously deployed successfully and database connectivity through Railway to Supabase was previously validated.
 
@@ -223,13 +229,13 @@ Current known deployment state:
 
 ```text
 Frontend (Vercel)
-→ 🟡 Previously deployed — current connectivity unverified
+-> [PREVIOUSLY DEPLOYED] Previously deployed -- current connectivity unverified
 
 Backend (Railway)
-→ 🔴 Expired — must be redeployed
+-> [EXPIRED] Expired -- must be redeployed
 
 Database (Supabase)
-→ 🟡 Exists — current production schema state unverified
+-> [EXISTS] Exists -- current production schema state unverified
 ```
 
 Do not describe the backend as currently healthy or available without current verification.
@@ -238,15 +244,20 @@ Before declaring production operational, verify:
 
 ```text
 Railway redeployment
-      ↓
+      |
+      v
 /health endpoint responds
-      ↓
+      |
+      v
 Database connectivity confirmed
-      ↓
+      |
+      v
 Authentication working
-      ↓
+      |
+      v
 Authenticated CRUD working
-      ↓
+      |
+      v
 Tenant isolation verified
 ```
 
@@ -254,13 +265,17 @@ Production verification must establish the complete path:
 
 ```text
 Vercel
-   ↓
+   |
+   v
 Railway
-   ↓
+   |
+   v
 Express
-   ↓
+   |
+   v
 Prisma
-   ↓
+   |
+   v
 Supabase PostgreSQL
 ```
 
@@ -274,7 +289,7 @@ PROJECT_STATE.md
 
 # Current Development Phase
 
-🟡 **DOCUMENTATION / ARCHITECTURE FREEZE**
+[DOCUMENTATION / ARCHITECTURE FREEZE] **DOCUMENTATION / ARCHITECTURE FREEZE**
 
 The project is currently completing its documentation and architecture-state freeze.
 
@@ -282,17 +297,23 @@ The immediate objective is:
 
 ```text
 Verify current implementation
-        ↓
+        |
+        v
 Verify current configuration
-        ↓
+        |
+        v
 Verify deployment state where relevant
-        ↓
+        |
+        v
 Freeze accurate project state
-        ↓
+        |
+        v
 Finalize architecture/decisions/technical debt
-        ↓
+        |
+        v
 Complete consistency audit
-        ↓
+        |
+        v
 Begin next engineering phase
 ```
 
@@ -304,7 +325,7 @@ Do not begin major feature expansion while the documentation/state freeze remain
 
 The next engineering phase is expected to be:
 
-## Phase 5.2 — Production Hardening
+## Phase 5.2 -- Production Hardening
 
 Expected areas include:
 
@@ -341,7 +362,8 @@ Current intended architecture:
 
 ```text
 services/api.ts
-        ↓
+        |
+        v
 domain API/service modules
 ```
 
@@ -428,13 +450,17 @@ If documentation conflicts with actual implementation:
 
 ```text
 STOP
- ↓
+ |
+ v
 VERIFY THE CODE
- ↓
+ |
+ v
 VERIFY DEPLOYED STATE IF RELEVANT
- ↓
+ |
+ v
 UPDATE PROJECT_STATE.md
- ↓
+ |
+ v
 UPDATE AFFECTED DOCUMENTS
 ```
 
@@ -467,23 +493,32 @@ The required workflow is:
 
 ```text
 Read authoritative documentation
-        ↓
+        |
+        v
 Inspect actual implementation
-        ↓
+        |
+        v
 Establish current behavior
-        ↓
+        |
+        v
 Identify discrepancy/risk/task
-        ↓
+        |
+        v
 Choose smallest safe change
-        ↓
+        |
+        v
 Implement
-        ↓
+        |
+        v
 Test
-        ↓
+        |
+        v
 Assess documentation impact
-        ↓
+        |
+        v
 Update affected documents
-        ↓
+        |
+        v
 Verify consistency
 ```
 
@@ -497,9 +532,11 @@ Prefer:
 
 ```text
 One logical change
-        ↓
+        |
+        v
 Verify
-        ↓
+        |
+        v
 Continue
 ```
 
@@ -507,9 +544,11 @@ Avoid:
 
 ```text
 Multiple unrelated changes
-        ↓
+        |
+        v
 Large refactor
-        ↓
+        |
+        v
 Difficult debugging
 ```
 
@@ -770,15 +809,20 @@ Preferred workflow:
 
 ```text
 Implement
-   ↓
+   |
+   v
 Test
-   ↓
+   |
+   v
 Assess impact
-   ↓
+   |
+   v
 Update affected source-of-truth documents
-   ↓
+   |
+   v
 Verify consistency
-   ↓
+   |
+   v
 Continue
 ```
 
@@ -786,7 +830,8 @@ Never:
 
 ```text
 Implement
-   ↓
+   |
+   v
 Rewrite every document regardless of impact
 ```
 
@@ -822,13 +867,17 @@ The correct progression is:
 
 ```text
 Documented claim
-      ↓
+      |
+      v
 Inspect implementation
-      ↓
+      |
+      v
 Verify behavior
-      ↓
+      |
+      v
 Establish evidence
-      ↓
+      |
+      v
 Declare current truth
 ```
 
