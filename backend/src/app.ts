@@ -29,7 +29,7 @@ app.set("trust proxy", 1);
 console.log("🔍 ENVIRONMENT CHECK:");
 console.log("📡 JWT_SECRET:", !!env.JWT_SECRET);
 console.log("📡 DATABASE_URL:", !!env.DATABASE_URL);
-console.log("📡 FRONTEND_URL:", process.env.FRONTEND_URL || "NOT SET");
+console.log("📡 FRONTEND_URL:", env.FRONTEND_URL || "NOT SET");
 console.log("📡 PORT:", env.PORT);
 console.log("📡 NODE_ENV:", env.NODE_ENV);
 console.log("=================================");
@@ -46,11 +46,14 @@ app.use(
 // ============================================
 // CORS
 // ============================================
+const corsOrigins =
+  env.NODE_ENV === "production"
+    ? [env.FRONTEND_URL]
+    : ["http://localhost:3000", env.FRONTEND_URL];
+
 app.use(
   cors({
-    origin: ["http://localhost:3000", process.env.FRONTEND_URL].filter(
-      Boolean,
-    ) as string[],
+    origin: corsOrigins,
     credentials: true,
   }),
 );
