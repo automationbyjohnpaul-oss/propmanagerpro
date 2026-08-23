@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { logError } from "../lib/errorLogger";
+import { env } from "../config/env";
 
 export function errorMiddleware(
   err: any,
@@ -34,11 +35,11 @@ export function errorMiddleware(
 
   res.status(statusCode).json({
     message:
-      process.env.NODE_ENV === "production"
+      env.NODE_ENV === "production"
         ? "Internal Server Error"
         : err?.message || "Internal Server Error",
 
-    ...(process.env.NODE_ENV === "development" && {
+    ...(env.NODE_ENV === "development" && {
       code: err?.code,
       stack: err?.stack,
     }),
