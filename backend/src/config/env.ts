@@ -11,6 +11,7 @@ const schema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   FRONTEND_URL: z.string().url(),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });
 
 export const env = schema.parse(process.env);
