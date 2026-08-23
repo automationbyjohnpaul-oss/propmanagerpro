@@ -1,4 +1,4 @@
-# PropManager Pro Markdown Standard
+﻿# PropManager Pro Markdown Standard
 
 This document is the authoritative formatting standard for PropManager Pro documentation.
 
@@ -40,36 +40,65 @@ Do not introduce:
 
 Use these ASCII equivalents:
 
-| Meaning             | Use   |   |
-| ------------------- | ----- | - |
-| Right arrow         | `->`  |   |
-| Left arrow          | `<-`  |   |
-| Bidirectional arrow | `<->` |   |
-| Em dash             | `--`  |   |
-| En dash             | `-`   |   |
-| Curly double quotes | `"`   |   |
-| Curly single quotes | `'`   |   |
-| Ellipsis            | `...` |   |
-| Tree branch         | `+--` |   |
+| Meaning             | Use   |
+| ------------------- | ----- |
+| Right arrow         | `->`  |
+| Left arrow          | `<-`  |
+| Bidirectional arrow | `<->` |
+| Em dash             | `--`  |
+| En dash             | `-`   |
+| Curly double quotes | `"`   |
+| Curly single quotes | `'`   |
+| Ellipsis            | `...` |
+| Tree branch         | `+--` |
 | Tree vertical line  | `     | ` |
 
-For status indicators, use plain text labels:
+### Status Label Conversion
 
-```text
-[LOCKED]
-[CONFIRMED]
-[PLANNED]
-[PENDING]
-[REJECTED]
-[DECISION]
-[WARNING]
-[NOTE]
-[CRITICAL]
-[IMPORTANT]
-[AI]
-[DEPLOY]
-[TARGET]
-```
+When replacing a Unicode status indicator with an ASCII status label:
+
+- Preserve the exact meaning already expressed by the original text.
+- Do not infer a new status from color, position, or context.
+- Do not replace or rewrite the accompanying wording.
+- Replace only the visual indicator.
+- If the status meaning is explicitly stated in the text, use that meaning as the ASCII label.
+- If the status meaning is ambiguous, use the existing wording as the ASCII label rather than guessing.
+
+### Ambiguous Status Indicators
+
+If the Unicode indicator's semantic meaning cannot be determined with certainty from the existing text, the AI must preserve the wording and use that wording as the ASCII label.
+
+For example:
+
+- If the text says "UNVERIFIED", use `[UNVERIFIED]`.
+- If the text says "Previously deployed", use `[PREVIOUSLY DEPLOYED]`.
+- If the text says "Expired", use `[EXPIRED]`.
+- If the text says "Exists", use `[EXISTS]`.
+
+If the text does not explicitly state the status meaning, use the text itself as the label:
+
+| Original | Correct ASCII replacement |
+|---|---|
+| `🟡 DOCUMENTATION / ARCHITECTURE FREEZE` | `[DOCUMENTATION / ARCHITECTURE FREEZE] DOCUMENTATION / ARCHITECTURE FREEZE` |
+
+Do not infer a status from the color alone.
+
+### Examples
+
+| Original | Correct ASCII replacement |
+|---|---|
+| `⚪ UNVERIFIED` | `[UNVERIFIED] UNVERIFIED` |
+| `🟡 Previously deployed` | `[PREVIOUSLY DEPLOYED] Previously deployed` |
+| `🔴 Expired` | `[EXPIRED] Expired` |
+| `🟡 Exists` | `[EXISTS] Exists` |
+
+AI must not convert:
+
+- `🟡` to `[PLANNED]` unless the original meaning is explicitly "planned".
+- `🔴` to `[REJECTED]` unless the original meaning is explicitly "rejected".
+- `⚪` to `[PENDING]` unless the original meaning is explicitly "pending".
+
+Formatting normalization is not an authorization to reinterpret project state.
 
 Do not use emoji equivalents.
 
@@ -511,4 +540,3 @@ Otherwise, this standard remains authoritative.
 ---
 
 **End of Standard**
-
