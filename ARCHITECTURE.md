@@ -1,12 +1,12 @@
-# PropManager Pro — Architecture
+﻿# PropManager Pro -- Architecture
 
 **Last Updated:** August 21, 2026
-**Architecture State:** 🔒 LOCKED — SSOT Architecture Baseline
+**Architecture State:** [LOCKED] -- SSOT Architecture Baseline
 **Current Focus:** SSOT Enforcement / Backend Architecture Consolidation
 
 ---
 
-# 1. Architectural Principles
+## 1. Architectural Principles
 
 PropManager Pro follows these primary engineering principles:
 
@@ -23,7 +23,7 @@ The system should prefer one authoritative implementation over duplicated logic.
 
 ---
 
-# 2. Source-of-Truth Hierarchy
+## 2. Source-of-Truth Hierarchy
 
 When determining what is actually true:
 
@@ -41,432 +41,559 @@ If documentation conflicts with implementation:
 
 ```text
 STOP
-↓
+|
+v
 Inspect actual implementation
-↓
+|
+v
 Determine current behavior
-↓
+|
+v
 Correct PROJECT_STATE.md
-↓
+|
+v
 Correct affected documentation
-↓
+|
+v
 Record important decision/history if necessary
+```
+
 Documentation must never be treated as more authoritative than the running system.
 
-3. System Architecture
+---
+
+## 3. System Architecture
+
 PropManager Pro follows a modular full-stack architecture:
 
-text
+```text
 Browser
-   ↓
+   |
+   v
 Next.js Frontend
-   ↓
+   |
+   v
 Express Backend
-   ↓
+   |
+   v
 Prisma
-   ↓
+   |
+   v
 PostgreSQL / Supabase
-4. Backend Layer Responsibilities
-text
+```
+
+---
+
+## 4. Backend Layer Responsibilities
+
+```text
 HTTP Request
-     ↓
+     |
+     v
 Middleware
-     ↓
+     |
+     v
 Controller
-     ↓
+     |
+     v
 Service
-     ↓
+     |
+     v
 Prisma
-     ↓
+     |
+     v
 PostgreSQL / Supabase
-Middleware
+```
+
+### Middleware
+
 Responsible for:
 
-Authentication
-
-JWT verification
-
-Attaching authenticated identity
-
-Request-level concerns
+- Authentication
+- JWT verification
+- Attaching authenticated identity
+- Request-level concerns
 
 Authentication identity comes from:
 
-text
+```text
 req.userId
+```
+
 Client-supplied user IDs must never be trusted for authorization.
 
-Controllers
+### Controllers
+
 Controllers are HTTP orchestration layers.
 
 Controllers are responsible for:
 
-Reading request parameters
-
-Reading request bodies
-
-Reading authenticated identity
-
-Calling the appropriate service
-
-Translating service results into HTTP responses
-
-Translating validation/errors where necessary
+- Reading request parameters
+- Reading request bodies
+- Reading authenticated identity
+- Calling the appropriate service
+- Translating service results into HTTP responses
+- Translating validation/errors where necessary
 
 Controllers MUST NOT become the authoritative location for business rules.
 
 Controllers should not directly perform business mutations through Prisma when an appropriate service exists.
 
-Services
+### Services
+
 Services are the primary authoritative location for domain/business rules.
 
 Services are responsible for:
 
-Ownership verification
+- Ownership verification
+- Authorization-related domain checks
+- Relationship integrity
+- State transitions
+- Business constraints
+- Financial rules
+- Archive/restore behavior
+- Domain mutations
+- Coordinating related operations
 
-Authorization-related domain checks
+### SSOT Rule
 
-Relationship integrity
-
-State transitions
-
-Business constraints
-
-Financial rules
-
-Archive/restore behavior
-
-Domain mutations
-
-Coordinating related operations
-
-SSOT Rule
 Every business rule must have one authoritative implementation.
 
 Do not implement the same rule independently in:
 
-text
+```text
 Controller + Service + Frontend
+```
+
 The frontend may provide UX validation, but the backend service remains authoritative.
 
-5. Service-Layer SSOT Pattern
+---
+
+## 5. Service-Layer SSOT Pattern
+
 Preferred:
 
-text
+```text
 Controller
-    ↓
+    |
+    v
 Service
-    ↓
+    |
+    v
 Prisma
+```
+
 Example:
 
-text
+```text
 activateLease()
 terminateLease()
 restoreLease()
 endLease()
+```
+
 These service functions are authoritative for lease state transitions.
 
 The controller should request the transition rather than independently implementing the transition rules.
 
-6. Mutation SSOT Rule
+---
+
+## 6. Mutation SSOT Rule
+
 Meaningful domain mutations should have a single authoritative service function.
 
 Examples:
 
-text
+```text
 Property
-├── createProperty()
-├── updateProperty()
-├── archiveProperty()
-└── restoreProperty()
++-- createProperty()
++-- updateProperty()
++-- archiveProperty()
++-- restoreProperty()
 
 Unit
-├── createUnit()
-├── updateUnit()
-├── archive/deleteUnit()
-└── restoreUnit()
++-- createUnit()
++-- updateUnit()
++-- archive/deleteUnit()
++-- restoreUnit()
 
 Tenant
-├── createTenant()
-├── updateTenant()
-├── archiveTenant()
-└── restoreTenant()
++-- createTenant()
++-- updateTenant()
++-- archiveTenant()
++-- restoreTenant()
 
 Lease
-├── createLease()
-├── updateLease()
-├── activateLease()
-├── terminateLease()
-├── restoreLease()
-└── endLease()
++-- createLease()
++-- updateLease()
++-- activateLease()
++-- terminateLease()
++-- restoreLease()
++-- endLease()
 
 Payment
-├── createPayment()
-└── controlled payment mutation / void workflow
++-- createPayment()
++-- controlled payment mutation / void workflow
+```
+
 If a controller currently bypasses one of these service operations and directly accesses Prisma, that is considered SSOT technical debt and should be consolidated before major feature expansion.
 
-7. Authorization SSOT
+---
+
+## 7. Authorization SSOT
+
 Every protected domain operation must enforce ownership using the authenticated user.
 
 Ownership examples:
 
-text
-Property → Property.userId
+```text
+Property -> Property.userId
+Unit -> Unit.property.userId
+Tenant -> Tenant.userId
+Lease -> Lease.property.userId
+Payment -> Payment.lease.property.userId
+```
 
-Unit → Unit.property.userId
-
-Tenant → Tenant.userId
-
-Lease → Lease.property.userId
-
-Payment → Payment.lease.property.userId
 The service layer must not rely solely on a controller having performed an ownership check.
 
 A service accepting:
 
-ts
+```ts
 (id, userId)
-must actually use userId when determining whether the resource belongs to that user.
+```
+
+must actually use `userId` when determining whether the resource belongs to that user.
 
 A parameter that exists but is not used for authorization is an SSOT/security defect.
 
-8. Frontend Architecture
-Technology
-Next.js
+---
 
-React
+## 8. Frontend Architecture
 
-TypeScript
+### Technology
 
-Tailwind CSS
-
-App Router
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- App Router
 
 Primary location:
 
-text
+```text
 frontend/src/
-Major Areas
-text
+```
+
+### Major Areas
+
+```text
 frontend/src/
-├── app/
-├── components/
-├── context/
-├── features/
-├── lib/
-├── services/
-└── types/
-Authentication
++-- app/
++-- components/
++-- context/
++-- features/
++-- lib/
++-- services/
++-- types/
+```
+
+### Authentication
+
 Authentication state is managed through:
 
-text
+```text
 context/AuthContext.tsx
+```
+
 Authentication utilities are in:
 
-text
+```text
 lib/auth.ts
+```
+
 Current storage:
 
-JWT token
-
-User information
+- JWT token
+- User information
 
 stored in browser localStorage.
 
-9. Frontend API Architecture
+---
+
+## 9. Frontend API Architecture
+
 Primary API abstraction:
 
-text
+```text
 frontend/src/services/api.ts
+```
+
 It provides:
 
-text
+```text
 api.get()
 api.post()
 api.put()
 api.patch()
 api.delete()
+```
+
 Responsibilities:
 
-API base URL handling
-
-Authorization header injection
-
-GET request deduplication
-
-HTTP error handling
-
-401/session-expiration handling
-
-JSON parsing
-
-Request cancellation support
+- API base URL handling
+- Authorization header injection
+- GET request deduplication
+- HTTP error handling
+- 401/session-expiration handling
+- JSON parsing
+- Request cancellation support
 
 API base URL:
 
-text
+```text
 NEXT_PUBLIC_API_URL
-The base URL must not include /api.
+```
+
+The base URL must not include `/api`.
 
 Correct:
 
-text
+```text
 https://propmanagerpro-production.up.railway.app
+```
+
 Avoid:
 
-text
+```text
 https://.../api/api/...
-10. API Client Duplication
+```
+
+---
+
+## 10. API Client Duplication
+
 Current files:
 
-text
+```text
 frontend/src/lib/api-client.ts
 frontend/src/services/api.ts
-services/api.ts is the operational API abstraction.
+```
 
-lib/api-client.ts appears unused.
+`services/api.ts` is the operational API abstraction.
+
+`lib/api-client.ts` appears unused.
 
 Do not treat it as a second architecture.
 
 Future cleanup should either remove it or explicitly migrate all consumers to it.
 
-Until then:
+Until then: `frontend/src/services/api.ts` is the operational frontend API client.
 
-frontend/src/services/api.ts is the operational frontend API client.
+---
 
-11. Authentication Architecture
+## 11. Authentication Architecture
+
 Authentication uses:
 
-text
+```text
 bcrypt
 JWT
+```
+
 Registration:
 
-text
+```text
 Frontend
-   ↓
+   |
+   v
 POST /api/auth/register
-   ↓
+   |
+   v
 Auth controller
-   ↓
+   |
+   v
 Auth service
-   ↓
+   |
+   v
 bcrypt password hashing
-   ↓
+   |
+   v
 User creation
-   ↓
+   |
+   v
 JWT generation
-   ↓
+   |
+   v
 Frontend
+```
+
 Login follows the same pattern.
 
 JWT payload:
 
-text
+```text
 userId
 email
 role
+```
+
 Token lifetime:
 
-text
+```text
 7 days
+```
+
 Protected requests:
 
-http
+```http
 Authorization: Bearer <token>
-12. Lease State Machine
+```
+
+---
+
+## 12. Lease State Machine
+
 Authoritative lease states:
 
-text
+```text
 PENDING
 ACTIVE
 ENDED
 TERMINATED
-There is no current EXPIRED state.
+```
 
-There is no current isActive field.
+There is no current `EXPIRED` state.
+
+There is no current `isActive` field.
 
 Transitions:
 
-text
+```text
 PENDING
-   │
-   │ activate
-   ↓
+   |
+   | activate
+   v
 ACTIVE
-   │
-   ├── terminate → TERMINATED
-   │
-   └── end       → ENDED
+   |
+   +-- terminate -> TERMINATED
+   |
+   +-- end       -> ENDED
+```
+
 Restoration:
 
-text
-TERMINATED → ACTIVE
+```text
+TERMINATED -> ACTIVE
+```
+
 provided no conflicting active lease exists.
 
-13. Multi-Tenant Security
+## Active Lease Definition
+
+The authoritative definition of an active lease in PropManager Pro is:
+
+> **A lease is active if and only if `status === "ACTIVE"`.**
+
+The `endDate` field represents the scheduled end date but does **not** automatically transition a lease out of the ACTIVE state.
+
+Leases must be explicitly transitioned to `ENDED` or `TERMINATED` via the appropriate service methods:
+
+- `endLease()` -> ACTIVE -> ENDED
+- `terminateLease()` -> ACTIVE -> TERMINATED
+
+This rule is enforced consistently across:
+
+- Tenant archive (blocks archiving tenants with active leases)
+- Unit archive (blocks archiving units with active leases)
+- Lease state transitions (activate/restore conflict detection)
+- Active lease lookups
+- Finance calculations
+
+---
+
+## 13. Multi-Tenant Security
+
 PropManager Pro is multi-tenant.
 
 Authenticated identity:
 
-text
+```text
 req.userId
+```
+
 Ownership:
 
-text
+```text
 User
- │
- ├── Property.userId
- │
- └── Tenant.userId
+ |
+ +-- Property.userId
+ |
+ +-- Tenant.userId
 
 Property
- │
- └── Units
+ |
+ +-- Units
 
 Unit
- │
- └── Leases
+ |
+ +-- Leases
 
 Tenant
- │
- └── Leases
+ |
+ +-- Leases
 
 Lease
- │
- └── Payments
+ |
+ +-- Payments
+```
+
 Non-negotiable rule:
 
 Never trust a resource ID alone when retrieving or modifying protected tenant-owned data.
 
-14. Database
+---
+
+## 14. Database
+
 ORM:
 
-text
+```text
 Prisma
+```
+
 Database:
 
-text
+```text
 PostgreSQL
+```
+
 Host:
 
-text
+```text
 Supabase
+```
+
 Schema location:
 
-text
+```text
 backend/prisma/schema.prisma
+```
+
 Migrations:
 
-text
+```text
 backend/prisma/migrations/
+```
+
 Database schema is implementation truth.
 
-15. Business Modules
+---
+
+## 15. Business Modules
+
 Current core modules:
 
-text
+```text
 Authentication
 Properties
 Units
@@ -475,141 +602,177 @@ Leases
 Payments
 Finance
 Audit
-16. Finance Architecture
+```
+
+---
+
+## 16. Finance Architecture
+
 Finance endpoints include:
 
-text
+```text
 /api/finance/dashboard
 /api/finance/revenue-by-property
 /api/finance/outstanding-rent
+```
+
 Rules:
 
-Financial calculations must prioritize correctness.
+- Financial calculations must prioritize correctness.
+- Financial records must not be silently destroyed.
+- Finance analytics must remain user-scoped.
 
-Financial records must not be silently destroyed.
+`financeAnalytics.service.ts` is the current database-backed calculation source.
 
-Finance analytics must remain user-scoped.
+Placeholder `finance.service.ts` must not be treated as authoritative.
 
-financeAnalytics.service.ts is the current database-backed calculation source.
+---
 
-Placeholder finance.service.ts must not be treated as authoritative.
+## 17. Audit Logging
 
-17. Audit Logging
 Important domain mutations should produce audit records.
 
 Current service:
 
-text
+```text
 audit.service.ts
+```
+
 Audit fields:
 
-userId
-
-action
-
-entity
-
-entityId
-
-metadata
-
-timestamp
+- `userId`
+- `action`
+- `entity`
+- `entityId`
+- `metadata`
+- `timestamp`
 
 Future hardening should prefer transactional mutation + audit where required.
 
 Preferred:
 
-text
+```text
 BEGIN TRANSACTION
     domain mutation
     audit record
 COMMIT
-18. Soft Delete
+```
+
+---
+
+## 18. Soft Delete
+
 Soft delete uses:
 
-text
+```text
 deletedAt
+```
+
 for:
 
-Properties
-
-Units
-
-Tenants
+- Properties
+- Units
+- Tenants
 
 Rules:
 
-Soft-deleted records normally excluded from active queries.
+- Soft-deleted records normally excluded from active queries.
+- Historical financial/lease data must be preserved.
+- Hard deletion only where explicitly justified.
 
-Historical financial/lease data must be preserved.
+---
 
-Hard deletion only where explicitly justified.
+## 19. Deployment Architecture
 
-19. Deployment Architecture
-text
-Frontend → Vercel
-Backend  → Railway
-Database → Supabase PostgreSQL
+```text
+Frontend -> Vercel
+Backend  -> Railway
+Database -> Supabase PostgreSQL
+```
+
 Current backend start:
 
-text
+```text
 npx prisma migrate deploy && node dist/server.js
+```
+
 Current backend scripts:
 
-text
+```text
 dev: ts-node-dev --respawn --transpile-only src/server.ts
 build: tsc
 start: npx prisma migrate deploy && node dist/server.js
 postinstall: prisma generate
+```
+
 Known issues:
 
-postinstall Prisma generation is implicit.
+- `postinstall` Prisma generation is implicit.
+- Migration is coupled to application startup.
+- Railway subscription expired.
+- Production deployment requires re-establishment.
 
-Migration is coupled to application startup.
+---
 
-Railway subscription expired.
+## 20. Environment Configuration
 
-Production deployment requires re-establishment.
-
-20. Environment Configuration
 Backend validates:
 
-text
+```text
 DATABASE_URL
 JWT_SECRET
 PORT
 NODE_ENV
-JWT_SECRET minimum length:
+```
 
-text
+`JWT_SECRET` minimum length:
+
+```text
 32 characters
+```
+
 Frontend:
 
-text
+```text
 NEXT_PUBLIC_API_URL
+```
+
 Known gap:
 
-text
+```text
 FRONTEND_URL is used for CORS but not validated by env.ts
-21. Type Safety
-Avoid any in domain services.
+```
+
+---
+
+## 21. Type Safety
+
+Avoid `any` in domain services.
 
 Known debt:
 
-ts
+```ts
 data: any
 tx?: any
-particularly in unit.service.ts.
+```
+
+particularly in `unit.service.ts`.
 
 Target:
 
-text
+```text
 Explicit domain input types
-↓
+|
+v
 Typed service functions
-↓
+|
+v
 Typed Prisma operations
-22. Known Architecture Debt
+```
+
+---
+
+## 22. Known Architecture Debt
 
 | Area | Problem | Priority |
 |------|---------|----------|
@@ -627,95 +790,141 @@ Typed Prisma operations
 **Note:** P2.1 addressed the active-lease archive business-rule duplication for Unit and Tenant.
 The remaining Unit/Tenant debt now specifically relates to:
 - Hard-delete lease-history validation (P2.2a)
-- Standardization of the active-lease definition (P2.2c)
-23. Architectural Refactoring Rule
+- Tenant hard-delete business-rule consolidation (P2.2b)
+
+Note: P2.2c (standardization of the active-lease definition) is now complete.
+
+---
+
+## 23. Architectural Refactoring Rule
+
 Do not perform a broad rewrite.
 
 Refactor incrementally:
 
-text
+```text
 Lease
-  ↓
+  |
+  v
 Property
-  ↓
+  |
+  v
 Unit
-  ↓
+  |
+  v
 Tenant
-  ↓
+  |
+  v
 Payment
-  ↓
+  |
+  v
 Finance
-  ↓
+  |
+  v
 Audit
+```
+
 For each domain:
 
-text
+```text
 Inspect
-↓
+|
+v
 Identify duplicated rules
-↓
+|
+v
 Choose authoritative service implementation
-↓
+|
+v
 Move logic
-↓
+|
+v
 Remove controller duplication
-↓
+|
+v
 Type it
-↓
+|
+v
 Test
-↓
+|
+v
 Verify
-↓
+|
+v
 Update documentation
-↓
+|
+v
 LOCK
-↓
+|
+v
 Next domain
-24. AI Engineering Rule
+```
+
+---
+
+## 24. AI Engineering Rule
+
 For every meaningful change:
 
-text
+```text
 Inspect implementation
-↓
+|
+v
 Form hypothesis
-↓
+|
+v
 Make smallest safe change
-↓
+|
+v
 Test
-↓
+|
+v
 Verify
-↓
+|
+v
 Assess documentation impact
-↓
+|
+v
 Update affected SSOT documents
-↓
+|
+v
 Continue
+```
+
 Never make unrelated changes merely because they appear while working on another issue.
 
-25. Architecture Lock Rule
+---
+
+## 25. Architecture Lock Rule
+
 When a major architectural change or domain refactor is completed and verified:
 
-text
+```text
 IMPLEMENTED
-     ↓
+     |
+     v
 TESTED
-     ↓
+     |
+     v
 VERIFIED
-     ↓
+     |
+     v
 DOCUMENTED
-     ↓
-🔒 LOCKED
+     |
+     v
+[LOCKED]
+```
+
 A locked state means:
 
-The current architecture is the working baseline.
-
-Do not casually reopen the completed work.
-
-Any later change that alters the locked architecture requires an explicit new decision.
-
-Continue to the next planned domain/work item.
+- The current architecture is the working baseline.
+- Do not casually reopen the completed work.
+- Any later change that alters the locked architecture requires an explicit new decision.
+- Continue to the next planned domain/work item.
 
 Locking does not mean the code can never change. It means the current verified architecture becomes the baseline for subsequent work.
 
-End of ARCHITECTURE.md
+---
+
+**End of `ARCHITECTURE.md`**
 ```
