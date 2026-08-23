@@ -498,10 +498,17 @@ The goal is consistency without unnecessary rewriting.
 
 This file is the authoritative formatting standard for active PropManager Pro documentation.
 
-Other documentation may define project-specific content, architecture, processes, or decisions, but formatting should follow this standard.
+Other documentation may define project-specific content, architecture, processes, or decisions.
 
-When formatting guidance conflicts with this document, this document takes precedence unless a more recent explicit project decision states otherwise.
+Formatting rules are governed by this document.
+
+Project-specific documentation may define its own structure when required by its purpose. This does not override the formatting rules defined here.
+
+A project decision may change this standard only when the change is explicitly documented as a formatting-standard decision.
+
+Otherwise, this standard remains authoritative.
 
 ---
 
 **End of Standard**
+
