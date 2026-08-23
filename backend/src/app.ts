@@ -24,17 +24,6 @@ const app = express();
 app.set("trust proxy", 1);
 
 // ============================================
-// ENVIRONMENT VARIABLE VALIDATION
-// ============================================
-console.log("🔍 ENVIRONMENT CHECK:");
-console.log("📡 JWT_SECRET:", !!env.JWT_SECRET);
-console.log("📡 DATABASE_URL:", !!env.DATABASE_URL);
-console.log("📡 FRONTEND_URL:", env.FRONTEND_URL || "NOT SET");
-console.log("📡 PORT:", env.PORT);
-console.log("📡 NODE_ENV:", env.NODE_ENV);
-console.log("=================================");
-
-// ============================================
 // SECURITY HEADERS (Helmet)
 // ============================================
 app.use(
