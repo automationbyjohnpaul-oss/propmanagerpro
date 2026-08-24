@@ -2,6 +2,7 @@ import app from "./app";
 import { env } from "./config/env";
 import { runStartupChecks } from "./lib/startupHealth";
 import { logger } from "./lib/logger";
+import { prisma } from "./lib/prisma";
 
 const PORT = Number(env.PORT);
 
@@ -22,9 +23,14 @@ async function startServer() {
       process.exit(1);
     });
 
-    process.on("SIGTERM", () => {
+    process.on("SIGTERM", async () => {
       logger.info("SIGTERM received. Shutting down...");
-      server.close(() => process.exit(0));
+
+      server.close(async () => {
+        await prisma.$disconnect();
+        logger.info("Database connection closed.");
+        process.exit(0);
+      });
     });
   } catch (err) {
     logger.error(err, "Startup checks failed. Server will not start.");
