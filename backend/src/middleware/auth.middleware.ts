@@ -23,7 +23,12 @@ export function authMiddleware(
     return;
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.slice(7).trim();
+
+  if (!token) {
+    res.status(401).json({ message: "Authentication required" });
+    return;
+  }
 
   try {
     const decoded = verifyToken(token);
@@ -36,7 +41,7 @@ export function authMiddleware(
     };
 
     next();
-  } catch (error) {
+  } catch {
     res.status(401).json({ message: "Invalid or expired token" });
   }
 }
