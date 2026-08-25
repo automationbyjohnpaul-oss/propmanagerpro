@@ -18,12 +18,15 @@ import {
 const router = Router();
 
 router.get("/", asyncHandler(getTenants));
+
 router.get("/:id", asyncHandler(getTenant));
+
 router.post(
   "/",
   validate(createTenantSchema),
   asyncHandler(createTenantHandler),
 );
+
 router.put(
   "/:id",
   validate(updateTenantSchema),
@@ -32,6 +35,7 @@ router.put(
 
 // ARCHIVE & RESTORE
 router.patch("/:id/archive", asyncHandler(archiveTenantHandler));
+
 router.patch("/:id/restore", asyncHandler(restoreTenantHandler));
 
 // DELETE (admin/maintenance only)

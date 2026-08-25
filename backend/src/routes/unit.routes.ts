@@ -17,10 +17,6 @@ import {
 
 const router = Router();
 
-// ============================================
-// UNIT ROUTES (PRODUCTION CLEAN)
-// ============================================
-
 // GET all units (by property + optional status)
 router.get("/", asyncHandler(getUnits));
 
@@ -32,10 +28,6 @@ router.post("/", validate(createUnitSchema), asyncHandler(createUnitHandler));
 
 // UPDATE unit
 router.put("/:id", validate(updateUnitSchema), asyncHandler(updateUnitHandler));
-
-// ============================================
-// SOFT DELETE SYSTEM
-// ============================================
 
 // ARCHIVE unit (soft delete)
 router.patch("/:id/archive", asyncHandler(archiveUnitHandler));

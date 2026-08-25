@@ -1,4 +1,3 @@
-// backend/src/routes/payment.routes.ts
 import { Router } from "express";
 import {
   getPayments,
@@ -35,6 +34,5 @@ router.put(
   asyncHandler(updatePaymentHandler),
 );
 
-// REMOVED: DELETE /:id - payments should never be deleted
-
+// Payments should never be deleted
 export default router;

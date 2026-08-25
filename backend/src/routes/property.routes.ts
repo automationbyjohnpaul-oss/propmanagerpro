@@ -18,19 +18,25 @@ import {
 const router = Router();
 
 router.get("/", asyncHandler(getProperties));
+
 router.get("/:id", asyncHandler(getProperty));
+
 router.post(
   "/",
   validate(createPropertySchema),
   asyncHandler(createPropertyHandler),
 );
+
 router.put(
   "/:id",
   validate(updatePropertySchema),
   asyncHandler(updatePropertyHandler),
 );
+
 router.delete("/:id", asyncHandler(deletePropertyHandler));
+
 router.patch("/:id/archive", asyncHandler(archiveProperty));
+
 router.patch("/:id/restore", asyncHandler(restoreProperty));
 
 export default router;
