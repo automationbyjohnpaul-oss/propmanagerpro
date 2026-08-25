@@ -55,6 +55,16 @@ app.use(express.json({ limit: "1mb" }));
 app.use(
   pinoHttp({
     logger,
+    redact: {
+      paths: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        "req.body.password",
+        "req.body.token",
+        "req.body.refreshToken",
+      ],
+      censor: "[REDACTED]",
+    },
   }),
 );
 
