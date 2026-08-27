@@ -213,10 +213,24 @@ export async function updateLease(
     // ----------------------------------------
 
     const propertyId = data.propertyId ?? existingLease.propertyId;
-
     const unitId = data.unitId ?? existingLease.unitId;
-
     const tenantId = data.tenantId ?? existingLease.tenantId;
+
+    // ----------------------------------------
+    // DETERMINE FINAL DATES
+    // ----------------------------------------
+
+    const startDate = data.startDate
+      ? new Date(data.startDate)
+      : existingLease.startDate;
+
+    const endDate = data.endDate
+      ? new Date(data.endDate)
+      : existingLease.endDate;
+
+    if (endDate <= startDate) {
+      throw new Error("End date must be after start date");
+    }
 
     // ----------------------------------------
     // PROPERTY OWNERSHIP
@@ -304,15 +318,9 @@ export async function updateLease(
       propertyId,
       unitId,
       tenantId,
+      startDate,
+      endDate,
     };
-
-    if (data.startDate) {
-      updateData.startDate = new Date(data.startDate);
-    }
-
-    if (data.endDate) {
-      updateData.endDate = new Date(data.endDate);
-    }
 
     if (data.signedAt) {
       updateData.signedAt = new Date(data.signedAt);
@@ -340,7 +348,7 @@ export async function updateLease(
 
 // ============================================
 // ACTIVATE LEASE
-// PENDING → ACTIVE
+// PENDING -> ACTIVE
 // ============================================
 
 export async function activateLease(id: string, userId: string) {
@@ -390,7 +398,7 @@ export async function activateLease(id: string, userId: string) {
 
 // ============================================
 // TERMINATE LEASE
-// ACTIVE → TERMINATED
+// ACTIVE -> TERMINATED
 // ============================================
 
 export async function terminateLease(
@@ -432,7 +440,7 @@ export async function terminateLease(
 
 // ============================================
 // RESTORE LEASE
-// TERMINATED → ACTIVE
+// TERMINATED -> ACTIVE
 // ============================================
 
 export async function restoreLease(id: string, userId: string) {
@@ -484,7 +492,7 @@ export async function restoreLease(id: string, userId: string) {
 
 // ============================================
 // END LEASE
-// ACTIVE → ENDED
+// ACTIVE -> ENDED
 // ============================================
 
 export async function endLease(id: string, userId: string) {
@@ -515,28 +523,5 @@ export async function endLease(id: string, userId: string) {
       unit: true,
       tenant: true,
     },
-  });
-}
-
-// ============================================
-// DELETE LEASE
-// ============================================
-
-export async function deleteLease(id: string, userId: string) {
-  const lease = await prisma.lease.findFirst({
-    where: {
-      id,
-      property: {
-        userId,
-      },
-    },
-  });
-
-  if (!lease) {
-    throw new Error("Lease not found");
-  }
-
-  return prisma.lease.delete({
-    where: { id },
   });
 }

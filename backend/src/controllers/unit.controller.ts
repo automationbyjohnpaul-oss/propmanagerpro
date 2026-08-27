@@ -6,7 +6,6 @@ import {
   updateUnit,
   deleteUnit,
   restoreUnit,
-  hardDeleteUnit,
 } from "../services/unit.service";
 import { prisma } from "../lib/prisma";
 import { createAuditLog } from "../services/audit.service";
@@ -184,38 +183,5 @@ export const restoreUnitHandler = asyncHandler(
       success: true,
       unit: restored,
     });
-  },
-);
-
-// ============================================
-// DELETE UNIT (Hard Delete - Use with caution)
-// ============================================
-export const deleteUnitHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const userId = getUserId(req);
-    const unitId = req.params.id as string;
-
-    // First verify the unit exists and belongs to the user
-    const existingUnit = await getUnitById(unitId, userId);
-
-    if (!existingUnit) {
-      throw createError("Unit not found", 404);
-    }
-
-    // Business rule moved to hardDeleteUnit service
-    // Use the hardDeleteUnit service which performs the actual deletion
-    await hardDeleteUnit(unitId, userId);
-
-    await createAuditLog(userId, "DELETE_UNIT", "Unit", unitId, {
-      unitNumber: existingUnit.unitNumber,
-      propertyId: existingUnit.propertyId,
-      bedrooms: existingUnit.bedrooms,
-      bathrooms: existingUnit.bathrooms,
-      rentAmount: Number(existingUnit.rentAmount),
-      deletedAt: new Date().toISOString(),
-      note: "Hard delete - use with caution",
-    });
-
-    return res.status(200).json({ success: true });
   },
 );

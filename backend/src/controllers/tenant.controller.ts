@@ -4,7 +4,6 @@ import {
   getTenantById,
   createTenant,
   updateTenant,
-  deleteTenant,
   archiveTenant,
   restoreTenant,
 } from "../services/tenant.service";
@@ -102,34 +101,6 @@ export const updateTenantHandler = asyncHandler(
     });
 
     return res.status(200).json(tenant);
-  },
-);
-
-// ============================================
-// DELETE TENANT (Hard Delete - Use with caution)
-// ============================================
-export const deleteTenantHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const userId = getUserId(req);
-    const tenantId = req.params.id as string;
-
-    const existingTenant = await getTenantById(tenantId, userId);
-
-    if (!existingTenant) {
-      throw createError("Tenant not found", 404);
-    }
-
-    await deleteTenant(tenantId, userId);
-
-    await createAuditLog(userId, "DELETE_TENANT", "Tenant", tenantId, {
-      firstName: existingTenant.firstName,
-      lastName: existingTenant.lastName,
-      email: existingTenant.email,
-      phone: existingTenant.phone,
-      deletedAt: new Date().toISOString(),
-    });
-
-    return res.status(204).send();
   },
 );
 

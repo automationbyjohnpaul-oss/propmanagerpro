@@ -4,7 +4,6 @@ import {
   getLeaseById,
   createLease,
   updateLease,
-  deleteLease,
   findActiveLeaseByUnit,
   activateLease,
   terminateLease,
@@ -184,37 +183,7 @@ export const updateLeaseHandler = asyncHandler(
 );
 
 // ============================================
-// DELETE LEASE
-// ============================================
-export const deleteLeaseHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const userId = getUserId(req);
-    const leaseId = req.params.id as string;
-
-    const existingLease = await getLeaseById(leaseId, userId);
-
-    if (!existingLease) {
-      throw createError("Lease not found", 404);
-    }
-
-    await createAuditLog(userId, "DELETE_LEASE", "Lease", existingLease.id, {
-      propertyId: existingLease.propertyId,
-      unitId: existingLease.unitId,
-      tenantId: existingLease.tenantId,
-      monthlyRent: Number(existingLease.monthlyRent),
-      startDate: existingLease.startDate,
-      endDate: existingLease.endDate,
-      status: existingLease.status,
-      deletedAt: new Date().toISOString(),
-    });
-
-    await deleteLease(leaseId, userId);
-    return res.status(204).send();
-  },
-);
-
-// ============================================
-// ACTIVATE LEASE (PENDING → ACTIVE)
+// ACTIVATE LEASE (PENDING -> ACTIVE)
 // ============================================
 export const activateLeaseHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -238,7 +207,7 @@ export const activateLeaseHandler = asyncHandler(
 );
 
 // ============================================
-// TERMINATE LEASE (ACTIVE → TERMINATED)
+// TERMINATE LEASE (ACTIVE -> TERMINATED)
 // ============================================
 export const terminateLeaseHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -268,7 +237,7 @@ export const terminateLeaseHandler = asyncHandler(
 );
 
 // ============================================
-// RESTORE LEASE (TERMINATED → ACTIVE)
+// RESTORE LEASE (TERMINATED -> ACTIVE)
 // ============================================
 export const restoreLeaseHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -292,7 +261,7 @@ export const restoreLeaseHandler = asyncHandler(
 );
 
 // ============================================
-// END LEASE (ACTIVE → ENDED)
+// END LEASE (ACTIVE -> ENDED)
 // ============================================
 export const endLeaseHandler = asyncHandler(
   async (req: Request, res: Response) => {

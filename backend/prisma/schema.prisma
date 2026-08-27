@@ -13,6 +13,7 @@
 // ADDED: AuditLog model for activity tracking (v0.7.0)
 // UPDATED: Optimized indexes for AuditLog (scalability)
 // UPDATED: Lease model with status, terminatedAt, terminationReason
+// UPDATED: Payment onDelete: Restrict to protect financial records
 // ============================================
 
 generator client {
@@ -61,18 +62,18 @@ enum LeaseStatus {
 // System users who manage properties
 
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
+  id        String   @id @default(cuid())
+  email     String   @unique
   password  String
   name      String
-  role      UserRole   @default(LANDLORD)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  role      UserRole @default(LANDLORD)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relationships
   properties Property[]
-  tenants   Tenant[]
-  auditLogs AuditLog[]
+  tenants    Tenant[]
+  auditLogs  AuditLog[]
 
   @@map("users")
 }
@@ -87,24 +88,24 @@ model User {
 // Set to timestamp when deleted. 30-day recovery window.
 
 model Property {
-  id          String   @id @default(cuid())
-  name        String
-  address     String
-  city        String
-  state       String
-  zip         String
-  unitCount   Int
-  deletedAt   DateTime?  // 👈 Soft delete field (null = active)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String    @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  state     String
+  zip       String
+  unitCount Int
+  deletedAt DateTime? // 👈 Soft delete field (null = active)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // User relation (now required)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Relationships
-  units       Unit[]
-  leases      Lease[]
+  units  Unit[]
+  leases Lease[]
 
   @@map("properties")
 }
@@ -122,20 +123,20 @@ model Property {
 // Set to timestamp when deleted. Preserves historical lease data.
 
 model Unit {
-  id          String   @id @default(cuid())
-  unitNumber  String
-  bedrooms    Int
-  bathrooms   Float
-  squareFeet  Int?
-  rentAmount  Decimal
-  deletedAt   DateTime?  // 👈 Soft delete field (null = active)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(cuid())
+  unitNumber String
+  bedrooms   Int
+  bathrooms  Float
+  squareFeet Int?
+  rentAmount Decimal
+  deletedAt  DateTime? // 👈 Soft delete field (null = active)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  propertyId  String
-  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  leases      Lease[]
+  leases Lease[]
 
   @@unique([propertyId, unitNumber])
   @@map("units")
@@ -152,20 +153,20 @@ model Unit {
 // Set to timestamp when deleted. Preserves historical lease data.
 
 model Tenant {
-  id                String   @id @default(cuid())
-  firstName         String
-  lastName          String
-  email             String
-  phone             String?
-  emergencyContact  String?
-  userId            String
-  deletedAt         DateTime?  // ← Soft delete field (null = active)
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String    @id @default(cuid())
+  firstName        String
+  lastName         String
+  email            String
+  phone            String?
+  emergencyContact String?
+  userId           String
+  deletedAt        DateTime? // ← Soft delete field (null = active)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  leases            Lease[]
-  payments          Payment[]
+  leases   Lease[]
+  payments Payment[]
 
   @@unique([userId, email])
   @@index([deletedAt])
@@ -188,8 +189,8 @@ model Lease {
   id                String      @id @default(cuid())
   startDate         DateTime
   endDate           DateTime
-  monthlyRent       Decimal     @db.Decimal(10,2)
-  securityDeposit   Decimal     @db.Decimal(10,2)
+  monthlyRent       Decimal     @db.Decimal(10, 2)
+  securityDeposit   Decimal     @db.Decimal(10, 2)
   status            LeaseStatus @default(PENDING)
   signedAt          DateTime?
   terminatedAt      DateTime?
@@ -198,15 +199,15 @@ model Lease {
   updatedAt         DateTime    @updatedAt
 
   // Foreign keys
-  propertyId        String
-  property          Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  unitId            String
-  unit              Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenantId          String
-  tenant            Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitId     String
+  unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relationships
-  payments          Payment[]
+  payments Payment[]
 
   @@index([status])
   @@index([unitId, status])
@@ -218,6 +219,7 @@ model Lease {
 // ============================================
 // Tracks every rent payment.
 // NEVER delete payments — void them instead.
+// onDelete: Restrict prevents accidental deletion of leases with payments.
 
 model Payment {
   id          String        @id @default(cuid())
@@ -231,10 +233,10 @@ model Payment {
   updatedAt   DateTime      @updatedAt
 
   // Foreign keys
-  leaseId     String
-  lease       Lease         @relation(fields: [leaseId], references: [id], onDelete: Cascade)
-  tenantId    String
-  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leaseId  String
+  lease    Lease  @relation(fields: [leaseId], references: [id], onDelete: Restrict)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@map("payments")
 }
@@ -252,24 +254,23 @@ model Payment {
 // - createdAt: Fast time-based queries
 
 model AuditLog {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  userId      String
-  action      String   // e.g., "TENANT_CREATED", "PROPERTY_UPDATED", "UNIT_ARCHIVED"
-  entity      String   // e.g., "Property", "Unit", "Tenant", "Lease", "Payment", "Auth"
-  entityId    String
+  userId   String
+  action   String // e.g., "TENANT_CREATED", "PROPERTY_UPDATED", "UNIT_ARCHIVED"
+  entity   String // e.g., "Property", "Unit", "Tenant", "Lease", "Payment", "Auth"
+  entityId String
 
-  metadata    Json?    // Additional context (changes, IP, user agent, requestId, sessionId, role)
+  metadata Json? // Additional context (changes, IP, user agent, requestId, sessionId, role)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // ✅ OPTIMIZED INDEXES FOR SAAS SCALE
-  @@index([userId, createdAt(sort: Desc)])  // Fast user activity feed
-  @@index([entity, entityId])                // Fast entity history
-  @@index([action])                          // Fast action filtering
-  @@index([createdAt])                       // Fast time-based cleanup
-
+  @@index([userId, createdAt(sort: Desc)]) // Fast user activity feed
+  @@index([entity, entityId]) // Fast entity history
+  @@index([action]) // Fast action filtering
+  @@index([createdAt]) // Fast time-based cleanup
   @@map("audit_logs")
 }

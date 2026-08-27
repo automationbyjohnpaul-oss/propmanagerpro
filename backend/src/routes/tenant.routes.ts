@@ -4,7 +4,6 @@ import {
   getTenant,
   createTenantHandler,
   updateTenantHandler,
-  deleteTenantHandler,
   archiveTenantHandler,
   restoreTenantHandler,
 } from "../controllers/tenant.controller";
@@ -37,8 +36,5 @@ router.put(
 router.patch("/:id/archive", asyncHandler(archiveTenantHandler));
 
 router.patch("/:id/restore", asyncHandler(restoreTenantHandler));
-
-// DELETE (admin/maintenance only)
-router.delete("/:id", asyncHandler(deleteTenantHandler));
 
 export default router;

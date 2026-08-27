@@ -131,12 +131,14 @@ export default function LeasesPage() {
                       <td className="px-6 py-4 text-sm">
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            lease.isActive
+                            lease.status === "ACTIVE"
                               ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-600"
+                              : lease.status === "PENDING"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-gray-100 text-gray-600"
                           }`}
                         >
-                          {lease.isActive ? "Active" : "Inactive"}
+                          {lease.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-right">

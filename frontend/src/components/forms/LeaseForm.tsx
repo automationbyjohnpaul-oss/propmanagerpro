@@ -25,7 +25,7 @@ export default function LeaseForm({
     endDate: initialData?.endDate || "",
     monthlyRent: initialData?.monthlyRent || 0,
     securityDeposit: initialData?.securityDeposit || 0,
-    isActive: initialData?.isActive ?? true,
+    status: initialData?.status || "PENDING",
     propertyId: initialData?.propertyId || "",
     unitId: initialData?.unitId || "",
     tenantId: initialData?.tenantId || "",
@@ -245,23 +245,6 @@ export default function LeaseForm({
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="isActive"
-            name="isActive"
-            checked={formData.isActive}
-            onChange={handleChange}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-          <label
-            htmlFor="isActive"
-            className="text-sm font-medium text-gray-700"
-          >
-            Active Lease
-          </label>
         </div>
       </div>
 

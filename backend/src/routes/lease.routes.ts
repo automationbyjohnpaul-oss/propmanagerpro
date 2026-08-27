@@ -4,7 +4,6 @@ import {
   getLease,
   createLeaseHandler,
   updateLeaseHandler,
-  deleteLeaseHandler,
   activateLeaseHandler,
   terminateLeaseHandler,
   restoreLeaseHandler,
@@ -24,7 +23,5 @@ router.patch("/:id/activate", asyncHandler(activateLeaseHandler));
 router.patch("/:id/terminate", asyncHandler(terminateLeaseHandler));
 router.patch("/:id/restore", asyncHandler(restoreLeaseHandler));
 router.patch("/:id/end", asyncHandler(endLeaseHandler));
-
-router.delete("/:id", asyncHandler(deleteLeaseHandler));
 
 export default router;

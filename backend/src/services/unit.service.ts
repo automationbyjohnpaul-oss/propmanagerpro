@@ -182,39 +182,3 @@ export async function restoreUnit(id: string, userId: string, tx?: any) {
     },
   });
 }
-
-// ============================================
-// HARD DELETE (Use with caution - with transaction support)
-// ============================================
-export async function hardDeleteUnit(id: string, userId: string, tx?: any) {
-  const client = tx || prisma;
-
-  const unit = await client.unit.findFirst({
-    where: {
-      id,
-      property: {
-        userId,
-        deletedAt: null,
-      },
-    },
-  });
-
-  if (!unit) {
-    throw new Error("Unit not found");
-  }
-
-  // Check if unit has any leases
-  const leaseCount = await client.lease.count({
-    where: { unitId: id },
-  });
-
-  if (leaseCount > 0) {
-    throw new ConflictError(
-      "Cannot delete unit with lease history. Archive it instead.",
-    );
-  }
-
-  return client.unit.delete({
-    where: { id },
-  });
-}

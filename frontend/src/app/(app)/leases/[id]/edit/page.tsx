@@ -65,7 +65,6 @@ export default function EditLeasePage() {
               endDate: lease.endDate,
               monthlyRent: Number(lease.monthlyRent),
               securityDeposit: Number(lease.securityDeposit),
-              isActive: lease.isActive,
               propertyId: lease.propertyId,
               unitId: lease.unitId,
               tenantId: lease.tenantId,
