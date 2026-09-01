@@ -1,6 +1,6 @@
 # PropManager Pro -- Project State
 
-**Last Updated:** August 21, 2026
+**Last Updated:** September 1, 2026
 
 **State:** [LOCKED] -- Documentation / SSOT Architecture Baseline
 
@@ -201,7 +201,11 @@ ENDED
 TERMINATED
 ```
 
-**Active Lease Definition:** A lease is active if and only if `status === "ACTIVE"`. The `endDate` field does **not** automatically transition a lease out of the ACTIVE state. Leases must be explicitly transitioned via service methods.
+**Active Lease Definition:** [PENDING / TO BE STANDARDIZED IN P2.2]
+
+The current code contains active-lease checks, but the authoritative business definition has not yet been finalized and standardized across the backend.
+
+P2.2 will inspect the existing implementations, determine the intended definition, standardize the service-layer implementation, and add regression tests.
 
 Current service-level state transitions:
 
@@ -212,7 +216,31 @@ restoreLease()
 endLease()
 ```
 
-Active lease conflicts are checked when activating/restoring leases.
+Active lease conflicts are currently checked when activating/restoring leases. These checks will be reviewed and standardized as part of P2.2.
+
+### Database Invariant
+
+PostgreSQL enforces one ACTIVE lease per unit through a partial unique index.
+
+Index name:
+
+```text
+leases_one_active_per_unit_idx
+```
+
+Migration:
+
+```text
+20260901120000_add_active_lease_per_unit_unique_index
+```
+
+The lease service converts concurrent ACTIVE-lease database conflicts (`P2002`) into a `409 ConflictError` with the message:
+
+```text
+Unit already has an active lease
+```
+
+This database-level invariant has been applied locally and committed.
 
 ---
 
@@ -490,7 +518,7 @@ Unit SSOT                      -> [LOCKED]
 Tenant SSOT                    -> [LOCKED]
 Payment SSOT                   -> [LOCKED]
 P2.1 Business Rules to Service -> [LOCKED]
-P2.2 Hard-Delete Rules         -> [PLANNED] READY / NEXT
+P2.2 Hard-Delete Rules         -> [READY / NEXT]
 Finance SSOT                   -> [PENDING] WAITING
 Audit SSOT                     -> [PENDING] WAITING
 Production redeployment        -> [PENDING] WAITING

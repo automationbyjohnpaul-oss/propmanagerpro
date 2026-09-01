@@ -565,6 +565,7 @@ were made, what changed historically, and what is planned.
 ```
 
 ---
+
 ## D-030 — Move Business Rules to Service Layer (P2.1)
 
 **Status:** 🟢 Implemented & Verified
@@ -620,6 +621,123 @@ P2.1 preserves the existing active-lease definition rather than changing
 business behavior while restructuring code.
 
 ---
+
+## D-031 — Unit Hard-Delete Lease-History Rule
+
+**Status:** 🟡 Decided
+
+**Implementation:** ❌ Not yet completed
+
+**Decision:** `hardDeleteUnit` must be the authoritative service-layer location for the unit hard-delete lease-history protection rule.
+
+**Reason:** The same business rule must not be independently enforced by both the controller and service layer. The service layer is the authoritative location for domain/business rules, consistent with D-030.
+
+**Impact:** The unit controller should orchestrate the HTTP request only. Unit hard-delete eligibility and lease-history protection belong to the unit service.
+
+**Action:** Move the lease-history protection completely into `hardDeleteUnit`, remove the duplicate controller-level check, and add/verify service-layer regression tests.
+
+---
+
+## D-032 — Tenant Hard-Delete Lease-History Rule
+
+**Status:** 🟡 Decided
+
+**Implementation:** ❌ Not yet completed
+
+**Decision:** Tenant hard-delete lease-history protection must be enforced authoritatively by the tenant service layer.
+
+**Reason:** Hard-delete business rules must have a single enforcement point. Keeping the rule in the service layer prevents future callers from bypassing the business invariant and keeps the architecture consistent with D-030.
+
+**Impact:** Tenant controllers should remain responsible for HTTP orchestration rather than independently implementing tenant hard-delete business rules.
+
+**Action:** Verify the current tenant hard-delete lease-history behavior, standardize enforcement in the tenant service, and add/verify service-layer regression tests.
+
+---
+
+## D-033 — Standard Active-Lease Definition
+
+**Status:** 🟡 Decided
+
+**Implementation:** ❌ Not yet completed
+
+**Decision:** PropManager Pro must establish one authoritative definition of an "active lease" and use that definition consistently across relevant unit and tenant business rules.
+
+**Reason:** The P2.1 restructuring preserved existing behavior rather than changing the definition of an active lease. The P2.2 investigation identified inconsistent active-lease checks across existing logic. A single definition is required to prevent different parts of the application from reaching different conclusions about whether a lease is active.
+
+**Impact:** Unit archive, tenant archive, unit hard-delete, tenant hard-delete, and other relevant lease-dependent business rules must use the standardized definition.
+
+**Action:** Review all active-lease checks across the backend, establish the authoritative definition, standardize service-layer implementations, and add regression tests covering the agreed definition.
+
+---
+
+## D-034 — Test Database Cleanup
+
+**Status:** 🟡 Decided
+
+**Implementation:** 🟠 Partially applied
+
+**Decision:** Tests that create persistent database records must explicitly clean up those records using dependency-safe deletion order.
+
+**Reason:** PropManager Pro service tests use a real database and create related users, properties, units, tenants, leases, and payments. Explicit cleanup prevents test data from contaminating subsequent tests and prevents foreign-key dependency failures.
+
+**Impact:** Test setup and teardown must account for relational dependencies. Test cleanup operations such as `prisma.user.delete()` are test-infrastructure operations and must not be interpreted as production user-account hard-delete functionality.
+
+**Action:** Preserve the existing explicit cleanup approach and verify that each database-integrated test suite leaves the test database in a predictable state. Do not introduce a production hard-delete user feature based solely on test cleanup code.
+
+---
+
+## D-035 — Database-Level Active Lease Uniqueness
+
+**Status:** 🟢 Verified
+
+**Implementation:** ✅ Applied
+
+**Decision:** PostgreSQL enforces at most one ACTIVE lease per unit using a partial unique index.
+
+**Index:**
+
+```text
+leases_one_active_per_unit_idx
+```
+
+**Migration:**
+
+```text
+20260901120000_add_active_lease_per_unit_unique_index
+```
+
+**Reason:** Service-layer checks alone cannot prevent concurrent requests from creating two ACTIVE leases for the same unit. A database constraint is required to guarantee the invariant even under race conditions.
+
+**Impact:** The lease service converts concurrent active-lease database conflicts (`P2002`) into a `409 ConflictError` with the message `Unit already has an active lease`.
+
+**Verification:**
+
+- Duplicate ACTIVE lease query returned zero rows before migration.
+- Migration applied locally with `prisma migrate dev`.
+- `prisma migrate status` reports schema up to date.
+- `prisma migrate deploy` reports no pending migrations.
+- Lease service regression test covers the database conflict path.
+- Full backend test suite passes.
+
+---
+
+## P2.2 Decision Boundary
+
+The decisions above establish the intended direction for P2.2 but do **not** represent completed implementation.
+
+P2.2 implementation remains pending until:
+
+1. Unit hard-delete lease-history enforcement is consolidated in the service.
+2. Tenant hard-delete lease-history enforcement is verified and standardized.
+3. The authoritative active-lease definition is established and applied consistently.
+4. Regression tests are added or updated.
+5. The relevant test suites pass.
+6. `PROJECT_STATE.md` is updated with verified implementation evidence.
+
+The existing P2.1 decision remains valid: P2.1 moved business-rule ownership to the service layer without intentionally changing the existing active-lease business definition.
+
+---
+
 ## Template for New Decisions
 
 ```markdown
@@ -639,7 +757,7 @@ business behavior while restructuring code.
 
 ---
 
-_Last updated: August 2026_
+_Last updated: September 2026_
 _Migrated and consolidated from two separate decision log versions._
-_Original decisions D-001 through D-020 preserved. Added D-021 through D-030_
+_Original decisions D-001 through D-020 preserved. Added D-021 through D-035_
 _from architecture audit session. Decision lifecycle and status markers added._

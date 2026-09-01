@@ -1,7 +1,9 @@
 ﻿# PropManager Pro -- Architecture
 
-**Last Updated:** August 21, 2026
+**Last Updated:** September 1, 2026
+
 **Architecture State:** [LOCKED] -- SSOT Architecture Baseline
+
 **Current Focus:** SSOT Enforcement / Backend Architecture Consolidation
 
 ---
@@ -488,26 +490,46 @@ TERMINATED -> ACTIVE
 
 provided no conflicting active lease exists.
 
-## Active Lease Definition
+### Active Lease Definition
 
-The authoritative definition of an active lease in PropManager Pro is:
+[PENDING / TO BE STANDARDIZED IN P2.2]
 
-> **A lease is active if and only if `status === "ACTIVE"`.**
+The current code contains active-lease checks, but the authoritative business definition has not yet been finalized and standardized across the backend.
 
-The `endDate` field represents the scheduled end date but does **not** automatically transition a lease out of the ACTIVE state.
+P2.2 will inspect the existing implementations, determine the intended definition, standardize the service-layer implementation, and add regression tests.
 
-Leases must be explicitly transitioned to `ENDED` or `TERMINATED` via the appropriate service methods:
-
-- `endLease()` -> ACTIVE -> ENDED
-- `terminateLease()` -> ACTIVE -> TERMINATED
-
-This rule is enforced consistently across:
+The current active-lease checks are enforced across:
 
 - Tenant archive (blocks archiving tenants with active leases)
 - Unit archive (blocks archiving units with active leases)
 - Lease state transitions (activate/restore conflict detection)
 - Active lease lookups
 - Finance calculations
+
+These checks will be reviewed and standardized as part of P2.2.
+
+### Database Enforcement
+
+PostgreSQL enforces the following invariant with a partial unique index:
+
+```text
+leases_one_active_per_unit_idx
+```
+
+Rule:
+
+```text
+At most one ACTIVE lease may exist per unit.
+```
+
+The lease service converts concurrent active-lease database conflicts (`P2002`) into:
+
+```text
+409 ConflictError
+Unit already has an active lease
+```
+
+This is the database-level enforcement layer complementing the service-layer active-lease conflict checks.
 
 ---
 
@@ -788,11 +810,12 @@ Typed Prisma operations
 | Finance | Placeholder/static finance service exists | P1 |
 
 **Note:** P2.1 addressed the active-lease archive business-rule duplication for Unit and Tenant.
+
 The remaining Unit/Tenant debt now specifically relates to:
 - Hard-delete lease-history validation (P2.2a)
 - Tenant hard-delete business-rule consolidation (P2.2b)
 
-Note: P2.2c (standardization of the active-lease definition) is now complete.
+Note: P2.2c (standardization of the active-lease definition) is defined but implementation-wide standardization is pending.
 
 ---
 
@@ -927,4 +950,3 @@ Locking does not mean the code can never change. It means the current verified a
 ---
 
 **End of `ARCHITECTURE.md`**
-```
