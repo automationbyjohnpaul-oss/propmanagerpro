@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../src/lib/prisma";
+import { ConflictError } from "../../src/lib/errors";
 import {
   createLease,
   getLeaseById,
@@ -127,6 +129,41 @@ describe("Lease Service", () => {
     expect(lease.propertyId).toBe(testPropertyId);
     expect(lease.unitId).toBe(testUnitId);
     expect(lease.tenantId).toBe(testTenantId);
+  });
+
+  it("converts an ACTIVE-lease database constraint race into a conflict", async () => {
+    const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      {
+        code: "P2002",
+        clientVersion: "test",
+      },
+    );
+    const transactionSpy = vi
+      .spyOn(prisma, "$transaction")
+      .mockRejectedValueOnce(uniqueConstraintError);
+
+    try {
+      const error = await createLease(testUserId, {
+        startDate: "2026-01-01T00:00:00.000Z",
+        endDate: "2026-12-31T00:00:00.000Z",
+        monthlyRent: 1000,
+        securityDeposit: 1000,
+        status: "ACTIVE",
+        propertyId: testPropertyId,
+        unitId: testUnitId,
+        tenantId: testTenantId,
+      }).catch((error) => error);
+
+      expect(error).toBeInstanceOf(ConflictError);
+      expect(error).toMatchObject({
+        name: "ConflictError",
+        message: "Unit already has an active lease",
+        statusCode: 409,
+      });
+    } finally {
+      transactionSpy.mockRestore();
+    }
   });
 
   it("should retrieve a lease belonging to the user", async () => {

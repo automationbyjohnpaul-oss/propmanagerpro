@@ -1,5 +1,25 @@
 import { prisma } from "../lib/prisma";
-import { LeaseStatus } from "@prisma/client";
+import { LeaseStatus, Prisma } from "@prisma/client";
+import { ConflictError } from "../lib/errors";
+
+const ACTIVE_LEASE_CONFLICT_MESSAGE = "Unit already has an active lease";
+
+async function translateActiveLeaseConflict<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new ConflictError(ACTIVE_LEASE_CONFLICT_MESSAGE);
+    }
+
+    throw error;
+  }
+}
 
 type CreateLeaseData = {
   startDate: string;
@@ -86,7 +106,7 @@ export async function findActiveLeaseByUnit(unitId: string, userId: string) {
 // ============================================
 
 export async function createLease(userId: string, data: CreateLeaseData) {
-  return prisma.$transaction(async (tx) => {
+  return translateActiveLeaseConflict(() => prisma.$transaction(async (tx) => {
     // ----------------------------------------
     // PROPERTY OWNERSHIP
     // ----------------------------------------
@@ -178,7 +198,7 @@ export async function createLease(userId: string, data: CreateLeaseData) {
         tenant: true,
       },
     });
-  });
+  }));
 }
 
 // ============================================
@@ -190,7 +210,7 @@ export async function updateLease(
   userId: string,
   data: UpdateLeaseData,
 ) {
-  return prisma.$transaction(async (tx) => {
+  return translateActiveLeaseConflict(() => prisma.$transaction(async (tx) => {
     // ----------------------------------------
     // EXISTING LEASE OWNERSHIP
     // ----------------------------------------
@@ -343,7 +363,7 @@ export async function updateLease(
         tenant: true,
       },
     });
-  });
+  }));
 }
 
 // ============================================
@@ -383,17 +403,19 @@ export async function activateLease(id: string, userId: string) {
     throw new Error("Unit already has an active lease");
   }
 
-  return prisma.lease.update({
-    where: { id },
-    data: {
-      status: "ACTIVE",
-    },
-    include: {
-      property: true,
-      unit: true,
-      tenant: true,
-    },
-  });
+  return translateActiveLeaseConflict(() =>
+    prisma.lease.update({
+      where: { id },
+      data: {
+        status: "ACTIVE",
+      },
+      include: {
+        property: true,
+        unit: true,
+        tenant: true,
+      },
+    }),
+  );
 }
 
 // ============================================
@@ -475,19 +497,21 @@ export async function restoreLease(id: string, userId: string) {
     throw new Error("Unit already has an active lease");
   }
 
-  return prisma.lease.update({
-    where: { id },
-    data: {
-      status: "ACTIVE",
-      terminatedAt: null,
-      terminationReason: null,
-    },
-    include: {
-      property: true,
-      unit: true,
-      tenant: true,
-    },
-  });
+  return translateActiveLeaseConflict(() =>
+    prisma.lease.update({
+      where: { id },
+      data: {
+        status: "ACTIVE",
+        terminatedAt: null,
+        terminationReason: null,
+      },
+      include: {
+        property: true,
+        unit: true,
+        tenant: true,
+      },
+    }),
+  );
 }
 
 // ============================================
