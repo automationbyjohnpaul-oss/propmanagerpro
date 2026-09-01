@@ -8,7 +8,6 @@ import {
   archiveProperty as archivePropertyService,
   restoreProperty as restorePropertyService,
 } from "../services/property.service";
-import { prisma } from "../lib/prisma";
 import { createAuditLog } from "../services/audit.service";
 import { asyncHandler } from "../middleware/asyncHandler";
 
@@ -34,17 +33,9 @@ export const getProperties = asyncHandler(
     const userId = getUserId(req);
     const { status } = req.query;
 
-    const where = {
-      userId,
-      ...(status === "archived"
-        ? { deletedAt: { not: null } }
-        : { deletedAt: null }),
-    };
+    const propertyStatus = status === "archived" ? "archived" : "active";
 
-    const properties = await prisma.property.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
+    const properties = await getAllProperties(userId, propertyStatus);
 
     return res.status(200).json(properties);
   },
@@ -70,9 +61,10 @@ export const getProperty = asyncHandler(async (req: Request, res: Response) => {
 export const createPropertyHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getUserId(req);
+
     const property = await createProperty({
       ...req.body,
-      userId: userId,
+      userId,
     });
 
     await createAuditLog(userId, "CREATE_PROPERTY", "Property", property.id, {

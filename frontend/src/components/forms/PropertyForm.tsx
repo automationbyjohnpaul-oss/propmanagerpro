@@ -9,14 +9,14 @@ interface PropertyFormProps {
   initialData?: Partial<CreatePropertyInput>;
   onSubmit: (data: CreatePropertyInput) => Promise<void>;
   submitLabel?: string;
-  isEditMode?: boolean;
+  cancelHref?: string;
 }
 
 export default function PropertyForm({
   initialData,
   onSubmit,
   submitLabel = "Create Property",
-  isEditMode = false,
+  cancelHref = "/properties",
 }: PropertyFormProps) {
   const [formData, setFormData] = useState<CreatePropertyInput>({
     name: initialData?.name || "",
@@ -33,7 +33,8 @@ export default function PropertyForm({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "unitCount" ? (value === "" ? 1 : Number(value)) : value,
+      [name]:
+        name === "unitCount" ? (value === "" ? "" : Number(value)) : value,
     }));
   }
 
@@ -176,7 +177,7 @@ export default function PropertyForm({
 
       <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
         <Link
-          href="/properties"
+          href={cancelHref}
           className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
         >
           Cancel
@@ -186,7 +187,7 @@ export default function PropertyForm({
           disabled={isSubmitting}
           className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
         >
-          {isSubmitting ? "Creating..." : submitLabel}
+          {isSubmitting ? "Saving..." : submitLabel}
         </button>
       </div>
     </form>

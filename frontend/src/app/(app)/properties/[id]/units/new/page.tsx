@@ -11,10 +11,15 @@ export default function NewUnitPage() {
   const propertyId = params.id as string;
 
   async function handleSubmit(data: Omit<CreateUnitInput, "propertyId">) {
+    if (!propertyId) {
+      throw new Error("Property ID is missing");
+    }
+
     await createUnit({
       ...data,
       propertyId,
     });
+
     router.push(`/properties/${propertyId}/units`);
     router.refresh();
   }

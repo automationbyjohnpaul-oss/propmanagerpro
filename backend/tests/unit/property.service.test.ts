@@ -124,6 +124,48 @@ describe("Property Service", () => {
     });
   });
 
+  it("should return only archived properties when status is archived", async () => {
+    const activeProperty = await createProperty({
+      name: "Active Filter Property",
+      address: "12 Active Filter Street",
+      city: "Filter City",
+      state: "FS",
+      zip: "12121",
+      unitCount: 0,
+      userId: testUserId,
+    });
+
+    const archivedProperty = await createProperty({
+      name: "Archived Filter Property",
+      address: "13 Archived Filter Street",
+      city: "Filter City",
+      state: "FS",
+      zip: "13131",
+      unitCount: 0,
+      userId: testUserId,
+    });
+
+    await archiveProperty(archivedProperty.id, testUserId);
+
+    const archivedProperties = await getAllProperties(testUserId, "archived");
+
+    expect(
+      archivedProperties.some((item) => item.id === archivedProperty.id),
+    ).toBe(true);
+
+    expect(
+      archivedProperties.some((item) => item.id === activeProperty.id),
+    ).toBe(false);
+
+    await prisma.property.delete({
+      where: { id: activeProperty.id },
+    });
+
+    await prisma.property.delete({
+      where: { id: archivedProperty.id },
+    });
+  });
+
   it("should not return another user's property by ID", async () => {
     const property = await createProperty({
       name: "Private Property",

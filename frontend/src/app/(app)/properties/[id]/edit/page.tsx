@@ -23,9 +23,13 @@ export default function EditPropertyPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadProperty() {
       try {
         const data = await getProperty(propertyId);
+
+        if (!isMounted) return;
 
         if (!data) {
           setError("Property not found");
@@ -34,29 +38,53 @@ export default function EditPropertyPage() {
 
         setProperty(data);
       } catch (err) {
+        if (!isMounted) return;
+
         setError(
           err instanceof Error ? err.message : "Failed to load property",
         );
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
-    loadProperty();
+    if (propertyId) {
+      loadProperty();
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, [propertyId]);
 
   async function handleSubmit(data: CreatePropertyInput) {
-    await updateProperty(propertyId, data);
-    router.push("/properties");
-    router.refresh();
+    setError(null);
+
+    try {
+      await updateProperty(propertyId, data);
+      router.push("/properties");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update property. Please try again.",
+      );
+    }
   }
 
   if (loading) {
     return <LoadingState message="Loading property..." />;
   }
 
-  if (error || !property) {
-    return <ErrorState message={error || "Property not found"} />;
+  if (error && !property) {
+    return <ErrorState message={error} />;
+  }
+
+  if (!property) {
+    return <ErrorState message="Property not found" />;
   }
 
   return (
@@ -66,6 +94,12 @@ export default function EditPropertyPage() {
           title="Edit Property"
           description="Update property information"
         />
+
+        {error && (
+          <div className="mb-4">
+            <ErrorState message={error} />
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <PropertyForm

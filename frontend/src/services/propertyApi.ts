@@ -55,3 +55,21 @@ export async function updateProperty(
 export async function deleteProperty(id: string): Promise<void> {
   return api.delete(`/api/properties/${id}`);
 }
+
+export async function archiveProperty(id: string): Promise<Property> {
+  const response = await api.patch<{
+    message: string;
+    property: Property;
+  }>(`/api/properties/${id}/archive`, {});
+
+  return response.property;
+}
+
+export async function restoreProperty(id: string): Promise<Property> {
+  const response = await api.patch<{
+    message: string;
+    property: Property;
+  }>(`/api/properties/${id}/restore`, {});
+
+  return response.property;
+}

@@ -1,10 +1,15 @@
 import { prisma } from "../lib/prisma";
 
-export async function getAllProperties(userId: string) {
+export async function getAllProperties(
+  userId: string,
+  status: "active" | "archived" = "active",
+) {
   return prisma.property.findMany({
     where: {
       userId,
-      deletedAt: null,
+      ...(status === "archived"
+        ? { deletedAt: { not: null } }
+        : { deletedAt: null }),
     },
     orderBy: { createdAt: "desc" },
   });

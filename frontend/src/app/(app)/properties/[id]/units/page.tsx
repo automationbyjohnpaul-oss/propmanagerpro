@@ -23,12 +23,16 @@ export default function UnitsPage() {
 
   const loadUnits = useCallback(async () => {
     setLoading(true);
+    setError(null);
+
     try {
       const status = showArchived ? "archived" : "active";
+
       const [propertyData, unitsData] = await Promise.all([
         getProperty(propertyId),
         getUnits(propertyId, status),
       ]);
+
       setProperty(propertyData);
       setUnits(unitsData);
     } catch (err) {
@@ -39,12 +43,16 @@ export default function UnitsPage() {
   }, [propertyId, showArchived]);
 
   useEffect(() => {
-    loadUnits();
-  }, [loadUnits]);
+    if (propertyId) {
+      loadUnits();
+    }
+  }, [propertyId, loadUnits]);
 
   async function handleArchive(unitId: string) {
     if (!confirm("Archive this unit?")) return;
+
     setActionLoading(unitId);
+
     try {
       await archiveUnit(unitId);
       await loadUnits();
@@ -57,6 +65,7 @@ export default function UnitsPage() {
 
   async function handleRestore(unitId: string) {
     setActionLoading(unitId);
+
     try {
       await restoreUnit(unitId);
       await loadUnits();
@@ -75,6 +84,8 @@ export default function UnitsPage() {
     return <ErrorState message={error || "Property not found"} />;
   }
 
+  const unitLabel = showArchived ? "archived units" : "units";
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
@@ -83,8 +94,8 @@ export default function UnitsPage() {
             title={`${property.name} — Units`}
             description={
               units.length > 0
-                ? `${units.length} ${showArchived ? "archived" : ""} units`
-                : `No ${showArchived ? "archived" : ""} units`
+                ? `${units.length} ${unitLabel}`
+                : `No ${unitLabel}`
             }
           />
         </div>
@@ -97,6 +108,7 @@ export default function UnitsPage() {
             >
               &larr; Back to Property
             </Link>
+
             {!showArchived && (
               <Link
                 href={`/properties/${property.id}/units/new`}
@@ -150,6 +162,7 @@ export default function UnitsPage() {
                     </th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {units.map((unit) => (
                     <tr
@@ -166,15 +179,19 @@ export default function UnitsPage() {
                           </span>
                         )}
                       </td>
+
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {unit.bedrooms}
                       </td>
+
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {unit.bathrooms}
                       </td>
+
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                         ${Number(unit.rentAmount).toLocaleString()}
                       </td>
+
                       <td className="px-6 py-4 text-sm text-right">
                         <div className="flex items-center justify-end gap-2">
                           {!showArchived ? (
@@ -185,6 +202,7 @@ export default function UnitsPage() {
                               >
                                 Edit
                               </Link>
+
                               <button
                                 onClick={() => handleArchive(unit.id)}
                                 disabled={actionLoading === unit.id}
