@@ -173,7 +173,7 @@ describe("Unit Service - Archive", () => {
     // Create another user
     const otherUser = await prisma.user.create({
       data: {
-        email: `other-${Date.now()}@example.com`,
+        email: `unit-other-${Date.now()}@example.com`,
         password: "hashed",
         name: "Other User",
       },

@@ -170,7 +170,7 @@ describe("Tenant Service - Archive", () => {
     // Create another user
     const otherUser = await prisma.user.create({
       data: {
-        email: `other-${Date.now()}@example.com`,
+        email: `tenant-other-${Date.now()}@example.com`,
         password: "hashed",
         name: "Other User",
       },
