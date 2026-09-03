@@ -751,28 +751,49 @@ Should PropManager Pro:
 - Should audit records distinguish this payment type?
 
 **Action:** No implementation change until this business rule is decided and recorded.
----
-
-## P2.2 Decision Boundary
-
-The decisions above establish the intended direction for P2.2 but do **not** represent completed implementation.
-
-P2.2 implementation remains pending until:
-
-1. Unit hard-delete lease-history enforcement is consolidated in the service.
-2. Tenant hard-delete lease-history enforcement is verified and standardized.
-3. The authoritative active-lease definition is established and applied consistently.
-4. Regression tests are added or updated.
-5. The relevant test suites pass.
-6. `PROJECT_STATE.md` is updated with verified implementation evidence.
-
-The existing P2.1 decision remains valid: P2.1 moved business-rule ownership to the service layer without intentionally changing the existing active-lease business definition.
 
 ---
 
-## Template for New Decisions
+## D-037 — Hard-Delete Business Boundary and Active-Lease Definition
 
-```markdown
+**Status:** 🟢 Confirmed
+**Implementation:** ✅ Confirmed in current implementation
+
+**Decision:** PropManager Pro does not support hard deletion as a business operation for Properties, Units, Tenants, Leases, or Payments. An active lease is defined exclusively by `Lease.status = ACTIVE`.
+
+**Reason:** Historical property-management and financial records must not be removed through normal business workflows. Property, Unit, and Tenant records use soft deletion; Leases use lifecycle state transitions; Payments have no delete workflow. A single status-based definition of an active lease prevents different parts of the application from interpreting lease dates differently.
+
+**Database protection:** Payment relations to Lease and Tenant use `onDelete: Restrict`, preventing payment records from being removed through those relationships.
+
+**Active-lease rule:**
+
+```text
+Active Lease = Lease.status == ACTIVE
+Lease startDate and endDate do not independently determine active status.
+P2.2 inspection result: Existing implementation already follows the status-based active-lease definition across the inspected lease-dependent business rules. No code change was required.
+The existing database cascade relationships between operational records were reviewed. They were not changed because the supported application layer does not expose hard-delete operations for these domains and no demonstrated defect requires a schema migration.
+Important: This decision does not introduce a VOID/VOIDED payment workflow. Payment reversal semantics remain governed by D-025, and payments against ENDED leases remain governed by pending decision D-036.
+Action: Treat the above as the baseline for future domain work. Any future hard-delete capability would require an explicit architectural decision and must not be introduced implicitly.
+P2.2 Decision Boundary
+P2.2 inspection is complete.
+The current implementation establishes:
+Hard deletion is not a supported business operation for Property, Unit,
+Tenant, Lease, or Payment.
+Property, Unit, and Tenant use soft deletion.
+Lease records use lifecycle transitions rather than deletion.
+Payments have no delete workflow.
+Payment → Lease and Payment → Tenant use onDelete: Restrict.
+The authoritative active-lease definition is Lease.status = ACTIVE.
+Lease dates do not independently determine active status.
+No Prisma schema change or migration is required from the P2.2 inspection.
+No implementation changes were made during this inspection.
+P2.2 can be locked after the affected SSOT documentation is synchronized and
+verified.
+D-031 and D-032 remain pending until their specific service-layer hard-delete
+lease-history behavior is explicitly verified and standardized.
+D-037 establishes the broader business boundary and active-lease definition;
+it does not by itself mark D-031 or D-032 as implemented.
+Template for New Decisions
 ## D-XXX — [Title]
 
 **Status:** [🟢 Confirmed / 🟡 Decided / ⚪ Pending / 🔴 Rejected / 🟠 Implemented]
@@ -785,11 +806,8 @@ The existing P2.1 decision remains valid: P2.1 moved business-rule ownership to 
 **Impact:** [What this affects]
 
 **Action:** [If not yet implemented — what needs to happen next]
-```
 
----
-
-_Last updated: September 2026_
-_Migrated and consolidated from two separate decision log versions._
-_Original decisions D-001 through D-020 preserved. Added D-021 through D-036_
-_from architecture audit session. Decision lifecycle and status markers added.
+Last updated: September 2026
+Migrated and consolidated from two separate decision log versions.
+Original decisions D-001 through D-020 preserved. Added D-021 through D-037
+from architecture audit session. Decision lifecycle and status markers added.

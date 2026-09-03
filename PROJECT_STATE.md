@@ -2,7 +2,7 @@
 
 **Last Updated:** September 3, 2026
 
-**State:** [LOCKED] -- SSOT Baseline Verified Locally / P2.2 Next
+**State:** [LOCKED] -- SSOT Baseline Verified Locally / P2.2 Inspection Confirmed
 
 **Current Development Mode:** Controlled SSOT consolidation and local verification
 
@@ -201,11 +201,42 @@ ENDED
 TERMINATED
 ```
 
-**Active Lease Definition:** [PENDING / TO BE STANDARDIZED IN P2.2]
+**Active Lease Definition:** [CONFIRMED]
 
-The current code contains active-lease checks, but the authoritative business definition has not yet been finalized and standardized across the backend.
+An active lease is defined exclusively by:
 
-P2.2 will inspect the existing implementations, determine the intended definition, standardize the service-layer implementation, and add regression tests.
+```text
+Lease.status = ACTIVE
+Lease dates (startDate / endDate) do not independently determine whether a
+lease is active.
+This definition is used by the current lease, unit, tenant, and finance logic
+for active-lease checks.
+Local verification confirmed that an ACTIVE lease with a past endDate still
+qualifies as active for lease-dependent business rules.
+```
+
+**Hard-Delete Business Rule**
+
+Hard deletion is not a supported business operation for:
+- Properties
+- Units
+- Tenants
+- Leases
+- Payments
+
+Properties, Units, and Tenants use soft deletion through `deletedAt`.
+Leases use lifecycle state transitions rather than deletion.
+Payments have no delete workflow and must be preserved.
+Payment foreign keys use `onDelete: Restrict` for both Lease and Tenant,
+protecting financial records from cascading deletion.
+
+The database contains some cascade relationships between parent operational
+records and their historical child records. These were inspected during P2.2,
+but no schema change is justified by the current application behavior because
+the public business layer does not expose hard-delete operations for these
+domains.
+
+No Prisma schema change or migration was made as part of P2.2 inspection.
 
 Current service-level state transitions:
 
@@ -434,7 +465,7 @@ Do not begin the next domain while the current domain remains unverified.
 
 ## 14. Current Immediate Objective
 
-Next action: P2.2 -- Standardize Hard-Delete Business Rules and Active-Lease Definition.
+Current action: P2.2 -- Documentation Lock / Implementation Boundary Confirmed.
 
 Before changing code:
 
@@ -547,8 +578,9 @@ Local API verification           -> [CONFIRMED]
 Tenant isolation                 -> [CONFIRMED LOCALLY]
 Finance isolation                -> [CONFIRMED LOCALLY]
 P2.1 Business Rules to Service   -> [LOCKED]
-P2.2 Hard-Delete Rules           -> [READY / NEXT]
-P2.2 Active-Lease Definition     -> [READY / NEXT]
+P2.2 Hard-Delete Rules           -> [CONFIRMED]
+P2.2 Active-Lease Definition     -> [CONFIRMED]
+P2.2 Implementation Changes      -> [NONE REQUIRED]
 Finance SSOT                     -> [PENDING] WAITING
 Audit SSOT                       -> [PENDING] WAITING
 Production deployment            -> [PENDING] WAITING
@@ -561,7 +593,7 @@ Production migration state       -> [PENDING] WAITING
 
 The next AI/session must NOT jump directly into unrelated feature development.
 
-Continue from: P2.2 -- Standardize Hard-Delete Business Rules and Active-Lease Definition.
+Continue from: P2.2 -- Documentation Lock / Implementation Boundary Confirmed.
 
 Inspect the current implementation first.
 
@@ -639,8 +671,8 @@ Frontend Auth:                AuthContext + localStorage
 Primary API abstraction:      frontend/src/services/api.ts
 Backend authentication:       authMiddleware + JWT verification
 Tenant isolation:             Authenticated user ownership boundaries
-Current phase:                P2.2 READY / NEXT
-Next engineering action:      P2.2 -- Standardize Hard-Delete Business Rules and Active-Lease Definition
+Current phase:                P2.2 INSPECTION COMPLETE / DOCUMENTATION LOCK
+Next engineering action:      Verify SSOT documentation, then determine the next controlled action
 ```
 
 **Primary unresolved areas:**

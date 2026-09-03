@@ -289,35 +289,32 @@ PROJECT_STATE.md
 
 # Current Development Phase
 
-[LOCAL VERIFICATION COMPLETE / P2.2 NEXT]
+[LOCAL VERIFICATION COMPLETE / P2.2 DOCUMENTATION LOCK]
 
-The documentation freeze is complete.
+The local verification baseline is complete.
 
-A local verification baseline has been established:
-
-```text
-Backend automated tests         -> 75/75 passed
-Backend production build        -> passed
-Frontend production build       -> passed
-Registration                    -> verified
-Login                           -> verified
-Protected property route        -> verified
-Property creation               -> verified
-Tenant isolation                -> verified
-Finance isolation               -> verified
-Active lease conflict path      -> verified
-Database partial unique index   -> verified
-```
-
-This is a local baseline. It is not production verification.
-
-The next engineering task is:
+P2.2 inspection has now established:
 
 ```text
-P2.2 -- Standardize Hard-Delete Business Rules and Active-Lease Definition
+Hard-delete business workflows -> Not supported
+Property deletion              -> Soft delete
+Unit deletion                  -> Soft delete
+Tenant deletion                -> Soft delete
+Lease deletion                 -> No delete workflow; lifecycle transitions
+Payment deletion               -> No delete workflow
+Payment -> Lease               -> onDelete: Restrict
+Payment -> Tenant              -> onDelete: Restrict
+Active lease definition        -> Lease.status = ACTIVE
+Date-based active status       -> Not used
+No Prisma schema change or migration was required from this inspection.
+The existing database cascade relationships were reviewed but were not changed
+because the supported application workflows do not expose hard-delete operations
+for these business records.
+P2.2 is now ready to be locked after documentation verification.
+The next engineering task must be determined from the updated
+PROJECT_STATE.md and TODO.md, rather than assuming that P2.2 still requires
+implementation work.
 ```
-
-No major feature expansion should begin before P2.2 is completed and locked.
 
 ---
 
