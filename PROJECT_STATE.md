@@ -1,10 +1,10 @@
 # PropManager Pro -- Project State
 
-**Last Updated:** September 1, 2026
+**Last Updated:** September 3, 2026
 
-**State:** [LOCKED] -- Documentation / SSOT Architecture Baseline
+**State:** [LOCKED] -- SSOT Baseline Verified Locally / P2.2 Next
 
-**Current Development Mode:** Controlled architectural consolidation
+**Current Development Mode:** Controlled SSOT consolidation and local verification
 
 ---
 
@@ -80,13 +80,13 @@ backend/prisma/schema.prisma
 
 ### Infrastructure
 
-[PLANNED] PREVIOUSLY ESTABLISHED / [PENDING] CURRENTLY UNVERIFIED
+[HISTORICAL] PREVIOUSLY ESTABLISHED / [PENDING] CURRENTLY UNVERIFIED
 
 - Frontend: Vercel
 - Backend: Railway
 - Database: Supabase PostgreSQL
 
-Current deployment state must be verified before being treated as production truth.
+Production deployment state remains unverified because Railway is unavailable.
 
 ---
 
@@ -240,7 +240,7 @@ The lease service converts concurrent ACTIVE-lease database conflicts (`P2002`) 
 Unit already has an active lease
 ```
 
-This database-level invariant has been applied locally and committed.
+**Local verification:** migration applied and database up to date. Production database state remains unverified because Railway is currently unavailable.
 
 ---
 
@@ -264,6 +264,8 @@ Payment -> Lease -> Property -> userId
 
 This remains a critical security invariant.
 
+**Local verification:** explicitly tested cross-user property access and received 404. Tenant isolation holds locally.
+
 ---
 
 ## 9. Current Soft Delete Model
@@ -280,9 +282,7 @@ for:
 - Units
 - Tenants
 
-Archive and restore functionality exists, but some controller implementations currently bypass the corresponding service methods.
-
-This is now classified as SSOT consolidation work.
+Archive and restore functionality exists. Some controller implementations may still bypass corresponding service methods and require SSOT consolidation.
 
 ---
 
@@ -317,19 +317,18 @@ AuthGuard usage unverified
 - Supabase database password rotation required.
 
 **P1**
-- Service/controller SSOT duplication.
+- Service/controller SSOT duplication remains.
 - `deleteLease()` accepts userId but does not use it for ownership verification.
-- Property archive/restore logic exists directly in controller.
-- Unit archive/restore logic exists directly in controller.
-- Tenant archive/restore logic is duplicated between controller/service.
+- Property archive/restore logic may still exist directly in controller.
+- Unit archive/restore logic may still exist directly in controller.
+- Tenant archive/restore logic may be duplicated between controller/service.
 - `unit.service.ts` uses `any`.
 - Payment business rules require further consolidation.
 - Audit operations are not consistently transactional.
 - `Property.unitCount` can drift from actual Units.
-- Automated test runner is not yet established.
-- Finance analytics isolation requires full verification.
 - `FRONTEND_URL` missing from environment validation.
-- Deployment pipeline non-explicit -- postinstall + bundled migration.
+- Development mode returns full stack traces.
+- Finance archived-property filtering requires review.
 
 **P2**
 - Duplicate/legacy frontend API abstraction requires verification.
@@ -506,27 +505,59 @@ Re-lock
 
 ---
 
-## 17. Current Status
+## 17. Local Verification Baseline
+
+Completed and confirmed locally:
 
 ```text
-Documentation architecture     -> [LOCKED]
-SSOT principle                 -> [LOCKED]
-Backend layered architecture   -> [LOCKED]
-Lease SSOT consolidation       -> [LOCKED]
-Property SSOT                  -> [LOCKED]
-Unit SSOT                      -> [LOCKED]
-Tenant SSOT                    -> [LOCKED]
-Payment SSOT                   -> [LOCKED]
-P2.1 Business Rules to Service -> [LOCKED]
-P2.2 Hard-Delete Rules         -> [READY / NEXT]
-Finance SSOT                   -> [PENDING] WAITING
-Audit SSOT                     -> [PENDING] WAITING
-Production redeployment        -> [PENDING] WAITING
+Backend automated tests         -> 75/75 passed
+Backend production build        -> passed
+Frontend production build       -> passed
+Registration                    -> verified
+Login                           -> verified
+Protected property route        -> verified
+Property creation               -> verified
+Tenant isolation                -> verified
+Finance isolation               -> verified
+Active lease conflict path      -> verified
+Database partial unique index   -> verified
+```
+
+**Important:**
+
+```text
+LOCAL VERIFIED
+       !=
+PRODUCTION VERIFIED
 ```
 
 ---
 
-## 18. Continuation Instruction
+## 18. Current Status
+
+```text
+Documentation architecture       -> [LOCKED]
+SSOT principle                   -> [LOCKED]
+Backend layered architecture     -> [LOCKED]
+Lease database invariant         -> [CONFIRMED LOCALLY]
+Automated test baseline          -> [CONFIRMED]
+Backend build                    -> [CONFIRMED]
+Frontend production build        -> [CONFIRMED]
+Local API verification           -> [CONFIRMED]
+Tenant isolation                 -> [CONFIRMED LOCALLY]
+Finance isolation                -> [CONFIRMED LOCALLY]
+P2.1 Business Rules to Service   -> [LOCKED]
+P2.2 Hard-Delete Rules           -> [READY / NEXT]
+P2.2 Active-Lease Definition     -> [READY / NEXT]
+Finance SSOT                     -> [PENDING] WAITING
+Audit SSOT                       -> [PENDING] WAITING
+Production deployment            -> [PENDING] WAITING
+Production migration state       -> [PENDING] WAITING
+```
+
+---
+
+## 19. Continuation Instruction
 
 The next AI/session must NOT jump directly into unrelated feature development.
 
@@ -538,7 +569,7 @@ Do not assume that documentation is more accurate than the code.
 
 ---
 
-## 19. Evidence Status
+## 20. Evidence Status
 
 Project documentation uses:
 
@@ -561,7 +592,7 @@ Explicitly accepted architectural/product decision.
 
 ---
 
-## 20. Rules for Future AI Sessions
+## 21. Rules for Future AI Sessions
 
 Any AI working on PropManager Pro must:
 
@@ -580,7 +611,7 @@ Any AI working on PropManager Pro must:
 
 ---
 
-## 21. Document Maintenance Rule
+## 22. Document Maintenance Rule
 
 Do not append historical development discussions to this document.
 
@@ -620,7 +651,9 @@ Next engineering action:      P2.2 -- Standardize Hard-Delete Business Rules and
 - Environment configuration alignment
 - SSOT controller/service duplication
 - Technical debt cleanup
-- Test coverage/automation
+- Development stack-trace exposure
+- Finance archived-property consistency
+- Payment-against-ended-lease business decision
 
 ---
 

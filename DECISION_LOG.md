@@ -227,7 +227,7 @@ rather than hard delete.
 be preserved for accounting integrity. Hard deleting would destroy historical
 rent records.
 
-**Rule derived:** Payments must never be hard deleted. Void by status change only.
+**Rule derived:** Payments must never be hard deleted. Payment lifecycle and reversal semantics are governed by Payment SSOT D-025.
 
 ---
 
@@ -688,7 +688,7 @@ business behavior while restructuring code.
 
 ## D-035 — Database-Level Active Lease Uniqueness
 
-**Status:** 🟢 Verified
+**Status:** 🟢 Verified Locally
 
 **Implementation:** ✅ Applied
 
@@ -719,6 +719,38 @@ leases_one_active_per_unit_idx
 - Lease service regression test covers the database conflict path.
 - Full backend test suite passes.
 
+**Production note:** Production database migration state remains unverified because Railway is currently unavailable.
+
+---
+
+## D-036 — Payments Against Ended Leases
+
+**Status:** ⚪ Pending
+
+**Implementation:** ❌ No implementation change made
+
+**Decision:** The business rule for recording payments against an ENDED lease is unresolved.
+
+**Evidence:** Verification established that the current payment workflow permits a payment to be created against an ENDED lease.
+
+**Current classification:** Not currently classified as a defect. There are legitimate scenarios where a payment after lease termination may represent settlement of an outstanding obligation.
+
+**Required business decision:**
+
+Should PropManager Pro:
+
+1. Allow payments against ENDED leases,
+2. Reject payments against ENDED leases, or
+3. Allow them only under specific conditions?
+
+**If allowed, the following must be defined:**
+
+- How should such payments affect outstanding rent?
+- How should they appear in finance reporting?
+- Should the system distinguish current rent from post-termination settlement?
+- Should audit records distinguish this payment type?
+
+**Action:** No implementation change until this business rule is decided and recorded.
 ---
 
 ## P2.2 Decision Boundary
@@ -759,5 +791,5 @@ The existing P2.1 decision remains valid: P2.1 moved business-rule ownership to 
 
 _Last updated: September 2026_
 _Migrated and consolidated from two separate decision log versions._
-_Original decisions D-001 through D-020 preserved. Added D-021 through D-035_
-_from architecture audit session. Decision lifecycle and status markers added._
+_Original decisions D-001 through D-020 preserved. Added D-021 through D-036_
+_from architecture audit session. Decision lifecycle and status markers added.

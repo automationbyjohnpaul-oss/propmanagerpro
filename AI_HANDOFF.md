@@ -104,7 +104,7 @@ Additional domains such as billing, documents, maintenance, communications, and 
 
 # Authentication
 
-Current documented flow:
+Current verified flow:
 
 ```text
 Register/Login
@@ -128,7 +128,7 @@ Bearer token
 Protected API
 ```
 
-JWT contains:
+JWT payload:
 
 ```text
 userId
@@ -136,13 +136,13 @@ email
 role
 ```
 
-Current documented expiration:
+Current token lifetime:
 
 ```text
 7 days
 ```
 
-These details must be verified against the current implementation before making authentication changes.
+These details must still be inspected against the current implementation before making authentication changes.
 
 ---
 
@@ -279,7 +279,7 @@ Prisma
 Supabase PostgreSQL
 ```
 
-For the current operational state, consult:
+For current operational state, consult:
 
 ```text
 PROJECT_STATE.md
@@ -289,61 +289,35 @@ PROJECT_STATE.md
 
 # Current Development Phase
 
-[DOCUMENTATION / ARCHITECTURE FREEZE] **DOCUMENTATION / ARCHITECTURE FREEZE**
+[LOCAL VERIFICATION COMPLETE / P2.2 NEXT]
 
-The project is currently completing its documentation and architecture-state freeze.
+The documentation freeze is complete.
 
-The immediate objective is:
+A local verification baseline has been established:
 
 ```text
-Verify current implementation
-        |
-        v
-Verify current configuration
-        |
-        v
-Verify deployment state where relevant
-        |
-        v
-Freeze accurate project state
-        |
-        v
-Finalize architecture/decisions/technical debt
-        |
-        v
-Complete consistency audit
-        |
-        v
-Begin next engineering phase
+Backend automated tests         -> 75/75 passed
+Backend production build        -> passed
+Frontend production build       -> passed
+Registration                    -> verified
+Login                           -> verified
+Protected property route        -> verified
+Property creation               -> verified
+Tenant isolation                -> verified
+Finance isolation               -> verified
+Active lease conflict path      -> verified
+Database partial unique index   -> verified
 ```
 
-Do not begin major feature expansion while the documentation/state freeze remains incomplete.
+This is a local baseline. It is not production verification.
 
----
+The next engineering task is:
 
-# Next Engineering Phase
+```text
+P2.2 -- Standardize Hard-Delete Business Rules and Active-Lease Definition
+```
 
-The next engineering phase is expected to be:
-
-## Phase 5.2 -- Production Hardening
-
-Expected areas include:
-
-- CORS
-- Rate limiting
-- Structured logging
-- Security headers
-- Authentication robustness
-- Authorization
-- Error handling
-- Reliability
-- Deployment determinism
-- Testing
-- Production verification
-
-Phase 5.2 must not be treated as complete merely because historical work was previously performed.
-
-Each item requires current implementation evidence.
+No major feature expansion should begin before P2.2 is completed and locked.
 
 ---
 
@@ -367,21 +341,22 @@ services/api.ts
 domain API/service modules
 ```
 
-`lib/api-client.ts` appears unused based on previous repository inspection, but its current usage must be verified before removal.
+`lib/api-client.ts` appears unused based on repository inspection, but its current usage must be verified before removal.
 
 ---
 
 ## Backend Build
 
-Review:
+Current verified scripts:
 
 ```text
-postinstall: prisma generate
+build: npx prisma generate && tsc
+start: npx prisma migrate deploy && node dist/server.js
 ```
 
-Production-critical Prisma generation should eventually be explicit rather than dependent on lifecycle hooks.
+Production-critical Prisma generation is explicit in the build script.
 
-Any change to the build/deployment pipeline must be verified against the actual package configuration and deployment platform.
+Do not reintroduce reliance on implicit `postinstall` behavior.
 
 ---
 
