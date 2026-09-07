@@ -187,15 +187,7 @@ Never create:
 /api/api/...
 ```
 
-There is also:
-
-```text
-frontend/src/lib/api-client.ts
-```
-
-Its active usage must be verified before removal or consolidation.
-
-It must not be treated as a second API architecture merely because the file exists.
+The unused `frontend/src/lib/api-client.ts` was removed after confirming no application callers. `services/api.ts` remains the operational client. Frontend TypeScript and production build passed after removal; this does not reverify the historical backend tests or production.
 
 ---
 
@@ -328,10 +320,9 @@ implementation work.
 
 ## Frontend
 
-Investigate:
+Operational client:
 
 ```text
-frontend/src/lib/api-client.ts
 frontend/src/services/api.ts
 ```
 
@@ -344,7 +335,7 @@ services/api.ts
 domain API/service modules
 ```
 
-`lib/api-client.ts` appears unused based on repository inspection, but its current usage must be verified before removal.
+Legacy `lib/api-client.ts` cleanup is complete; no replacement abstraction was introduced.
 
 ---
 

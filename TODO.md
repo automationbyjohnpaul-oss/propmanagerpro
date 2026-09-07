@@ -60,7 +60,7 @@ See `DECISION_LOG.md` and `PROJECT_STATE.md` for authoritative status.
 
 ## API Client Consolidation
 
-Inspection completed.
+Cleanup completed locally: unused legacy client removed after reference inspection. Frontend TypeScript (`tsc --noEmit --incremental false`) and production build (`npm run build`) passed after removal. No commit or production verification is implied.
 
 The operational API abstraction is:
 
@@ -68,19 +68,19 @@ The operational API abstraction is:
 frontend/src/services/api.ts
 ```
 
-The following file was found to be unused application code:
+The following unused application file was removed:
 
 ```text
 frontend/src/lib/api-client.ts
 ```
 
-Repository inspection found no application references to `apiClient` or `api-client.ts`.
+Repository application-source searches before removal found only the definition; after removal no `apiClient` or `api-client` references remained.
 
 ### Cleanup
 
-- [ ] Remove `frontend/src/lib/api-client.ts`.
-- [ ] Run frontend TypeScript/build verification after removal.
-- [ ] Confirm no repository application references remain.
+- [x] Remove `frontend/src/lib/api-client.ts`.
+- [x] Run frontend TypeScript/build verification after removal.
+- [x] Confirm no repository application references remain.
 
 No replacement API abstraction should be introduced unless a demonstrated requirement exists.
 

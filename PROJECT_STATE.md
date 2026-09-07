@@ -323,6 +323,8 @@ Property, Unit, and Tenant archive/restore controllers call ownership-checking s
 
 ## 10. Current Frontend Architecture
 
+Subsequent frontend cleanup removed the unused `lib/api-client.ts`. Frontend TypeScript and production build passed after removal; these checks are separate from the historical backend 75/75 baseline. `services/api.ts` remains unchanged. Production remains unverified.
+
 Primary API abstraction:
 
 ```text
@@ -338,7 +340,7 @@ AuthContext + localStorage
 Known items:
 
 ```text
-lib/api-client.ts appears unused
+lib/api-client.ts removed after confirming no application callers
 Standalone components/AuthGuard.tsx has no application references
 (app)/layout.tsx uses AuthContext as the application guard
 ```
@@ -366,7 +368,6 @@ The layout covers dashboard, properties/units, tenants, leases, payments, financ
 - Finance archived-property filtering requires review.
 
 **P2**
-- Duplicate/legacy frontend API abstraction requires verification.
 - Static/placeholder finance service requires cleanup.
 - Remaining debug logging requires review.
 - Other minor architecture cleanup.
@@ -662,7 +663,6 @@ Next engineering action:      Review documentation diff; obtain approval before 
 - Railway redeployment required
 - Supabase password rotation required
 - Production migration state unverified
-- API abstraction cleanup
 - Environment configuration alignment
 - SSOT controller/service duplication
 - Technical debt cleanup

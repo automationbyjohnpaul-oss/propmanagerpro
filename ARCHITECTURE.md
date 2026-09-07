@@ -378,22 +378,9 @@ https://.../api/api/...
 
 ## 10. API Client Duplication
 
-Current files:
+`frontend/src/services/api.ts` remains the operational frontend API client.
 
-```text
-frontend/src/lib/api-client.ts
-frontend/src/services/api.ts
-```
-
-`services/api.ts` is the operational API abstraction.
-
-`lib/api-client.ts` appears unused.
-
-Do not treat it as a second architecture.
-
-Future cleanup should either remove it or explicitly migrate all consumers to it.
-
-Until then: `frontend/src/services/api.ts` is the operational frontend API client.
+The unused `frontend/src/lib/api-client.ts` was removed after confirming no application callers. No replacement abstraction was introduced. Frontend TypeScript and production build passed after removal; production remains unverified.
 
 ---
 
