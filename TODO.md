@@ -27,7 +27,7 @@ Current implementation status belongs in `PROJECT_STATE.md`.
 
 ## P2.2 — Business Boundary and Active-Lease Inspection ✅ COMPLETE
 
-P2.2 inspection has been completed and documented.
+P2.2 inspection is complete; no implementation change was required. The six-document reconciliation is prepared for diff review before commit. This completion refers to inspection, not fresh runtime verification or completion of every historical P2.2 proposal.
 
 Confirmed:
 
@@ -45,8 +45,12 @@ Confirmed:
 
 The following decisions remain tracked separately and must not be treated as completed solely because the broader P2.2 inspection is complete:
 
-- [ ] D-031 — Verify/standardize Unit hard-delete lease-history behavior if a hard-delete service capability is introduced.
-- [ ] D-032 — Verify/standardize Tenant hard-delete lease-history behavior if a hard-delete service capability is introduced.
+- D-031 — Not implemented; inapplicable to current scope under D-037. Any future Unit hard-delete capability requires an explicit new decision and lease-history protection.
+- D-032 — Not implemented; inapplicable to current scope under D-037. Any future Tenant hard-delete capability requires an explicit new decision and lease-history protection.
+- D-033 — Resolved through D-037; existing status-based implementation satisfies the definition.
+- [ ] D-026 — Decide `unitCount` semantics before refactoring.
+- [ ] D-036 — Decide payments-against-ENDED-leases semantics before changing behavior.
+- [ ] Review stale schema comment "void them instead" against D-025 in a separately authorized change; no VOID/VOIDED workflow exists. The schema is untouched by reconciliation.
 
 See `DECISION_LOG.md` and `PROJECT_STATE.md` for authoritative status.
 
@@ -95,7 +99,7 @@ start: npx prisma migrate deploy && node dist/server.js
 
 No `postinstall` script currently exists.
 
-The previously established Railway build direction is also explicit:
+D-020's local build portion was implemented in `4155c2e`; its separate pre-deploy/start target is not established. Current `start` still runs migrations. The historically proposed Railway build direction is explicit, but current platform configuration was not verified:
 
 ```text
 npm ci
@@ -120,7 +124,7 @@ npm run build
 
 Authentication is already implemented.
 
-Current verified behavior includes:
+Current source-inspected behavior includes (not newly verified end-to-end):
 
 - JWT authentication.
 - JWT verification.
@@ -129,7 +133,9 @@ Current verified behavior includes:
 - Frontend token storage in `localStorage`.
 - Logout through session/token removal.
 - Automatic session cleanup and redirect after a `401`.
-- Authentication guard on the frontend.
+- `(app)/layout.tsx` guards application pages through AuthContext; standalone `components/AuthGuard.tsx` has no application references.
+- AuthContext restores the saved user without validating JWT expiry on initialization; backend verification and API 401 handling enforce expiry when requests occur.
+- Dashboard, properties/units, tenants, leases, payments, finance, and More are inside the guarded group; login/register are outside it.
 
 The following remain **review items**, not assumptions that the current implementation is defective:
 
@@ -192,13 +198,13 @@ tenant.service.test.ts
 unit.service.test.ts
 ```
 
-The full test suite has been verified locally at:
+The historical local baseline records (not rerun during this reconciliation):
 
 ```text
 75/75 tests passing
 ```
 
-Existing coverage includes authentication, ownership checks, lease rules, payment rules, finance calculations, archive behavior, and active-lease race protection.
+Existing test source covers authentication, ownership checks, lease rules, payment rules, finance calculations, and archive behavior, including ACTIVE leases with past end dates. The active-lease conflict regression mocks a Prisma `P2002` error; it does not itself run concurrent database requests. Current database index application and production behavior were not reverified.
 
 ### Remaining testing work
 

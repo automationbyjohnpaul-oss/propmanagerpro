@@ -144,6 +144,8 @@ Current token lifetime:
 
 These details must still be inspected against the current implementation before making authentication changes.
 
+The application guard is `frontend/src/app/(app)/layout.tsx` using AuthContext, not the unused standalone `components/AuthGuard.tsx`. It restores saved user state and redirects when no user is present after loading. JWT expiry is checked by the backend; API 401 handling clears stored token/user and redirects. This source inspection does not establish end-to-end browser verification.
+
 ---
 
 # Important Frontend API Rule
@@ -289,9 +291,9 @@ PROJECT_STATE.md
 
 # Current Development Phase
 
-[LOCAL VERIFICATION COMPLETE / P2.2 DOCUMENTATION LOCK]
+[P2.2 INSPECTION COMPLETE / DOCUMENTATION RECONCILIATION DIFF REVIEW]
 
-The local verification baseline is complete.
+The recorded local verification baseline is historical. The 75/75 tests, builds, local API checks, and migration application were not rerun during reconciliation; production remains unverified. September 7 source inspection at `82c475b` supports the P2.2 findings below.
 
 P2.2 inspection has now established:
 
@@ -310,7 +312,11 @@ No Prisma schema change or migration was required from this inspection.
 The existing database cascade relationships were reviewed but were not changed
 because the supported application workflows do not expose hard-delete operations
 for these business records.
-P2.2 is now ready to be locked after documentation verification.
+No hard-delete business service capability was found, independently of routes.
+D-031/D-032 are not implemented and are inapplicable to current scope under D-037.
+D-033 is resolved through D-037; D-026 and D-036 remain pending.
+The six-document reconciliation is prepared for diff review before commit.
+Do not treat a documentation lock as new runtime or production verification.
 The next engineering task must be determined from the updated
 PROJECT_STATE.md and TODO.md, rather than assuming that P2.2 still requires
 implementation work.
@@ -352,6 +358,8 @@ start: npx prisma migrate deploy && node dist/server.js
 ```
 
 Production-critical Prisma generation is explicit in the build script.
+
+D-020 records the historical configuration and separate pre-deploy/start target. Commit `4155c2e` implemented the local build portion; migrations still run in `start`. Production deployment staging remains unverified.
 
 Do not reintroduce reliance on implicit `postinstall` behavior.
 
@@ -417,6 +425,8 @@ When continuing this project:
 8. AI_HANDOFF.md
 9. README.md
 ```
+
+Implementation establishes current behavior; explicit architectural/business decisions establish intended behavior. Flag disagreements rather than assuming existing code proves the architecture correct.
 
 If documentation conflicts with actual implementation:
 

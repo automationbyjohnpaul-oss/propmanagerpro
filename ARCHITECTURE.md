@@ -1,10 +1,12 @@
 ﻿# PropManager Pro -- Architecture
 
-**Last Updated:** September 1, 2026
+**Last Updated:** September 7, 2026
 
 **Architecture State:** [LOCKED] -- SSOT Architecture Baseline
 
-**Current Focus:** SSOT Enforcement / Backend Architecture Consolidation
+**Current Focus:** Documentation reconciliation diff review; no implementation changes
+
+September 7 source/configuration inspection supports the current descriptions. Historical local tests/builds/database verification were not rerun; production remains unverified. The architecture baseline lock is not a claim that all domain debt or this reconciliation review is complete.
 
 ---
 
@@ -60,7 +62,7 @@ v
 Record important decision/history if necessary
 ```
 
-Documentation must never be treated as more authoritative than the running system.
+Documentation must never be treated as more authoritative than the running system for current behavior. Explicit decisions establish intended behavior; flag any implementation/decision disagreement rather than treating implementation as proof of architectural correctness.
 
 ---
 
@@ -235,7 +237,7 @@ Lease
 
 Payment
 +-- createPayment()
-+-- controlled payment mutation / void workflow
++-- updatePayment() under D-025; no VOID/VOIDED workflow
 ```
 
 If a controller currently bypasses one of these service operations and directly accesses Prisma, that is considered SSOT technical debt and should be consolidated before major feature expansion.
@@ -319,6 +321,8 @@ Current storage:
 - User information
 
 stored in browser localStorage.
+
+The application guard is `(app)/layout.tsx` using AuthContext; standalone `components/AuthGuard.tsx` has no application references. The layout hides children while loading or without a user, then redirects to /login. It covers dashboard, properties/units, tenants, leases, payments, finance, and More. Login/register are outside the group. Saved user restoration does not validate JWT expiry; the backend verifies JWTs, and API-client 401 handling clears token/user storage and redirects. This establishes source behavior, not end-to-end browser verification.
 
 ---
 
@@ -492,11 +496,9 @@ provided no conflicting active lease exists.
 
 ### Active Lease Definition
 
-[PENDING / TO BE STANDARDIZED IN P2.2]
+[CONFIRMED BY SOURCE INSPECTION / D-037]
 
-The current code contains active-lease checks, but the authoritative business definition has not yet been finalized and standardized across the backend.
-
-P2.2 will inspect the existing implementations, determine the intended definition, standardize the service-layer implementation, and add regression tests.
+Active Lease = Lease.status == ACTIVE. Lease dates do not independently determine activity. D-033 is resolved through D-037; no implementation change was required. Date ordering validation and payment reporting periods are separate concerns.
 
 The current active-lease checks are enforced across:
 
@@ -506,7 +508,7 @@ The current active-lease checks are enforced across:
 - Active lease lookups
 - Finance calculations
 
-These checks will be reviewed and standardized as part of P2.2.
+Creation/update conflicts also use ACTIVE status. Existing Unit/Tenant tests reject archive for ACTIVE leases with past end dates. Tests were inspected, not rerun.
 
 ### Database Enforcement
 
@@ -529,7 +531,7 @@ The lease service converts concurrent active-lease database conflicts (`P2002`) 
 Unit already has an active lease
 ```
 
-This is the database-level enforcement layer complementing the service-layer active-lease conflict checks.
+This migration defines the database-level enforcement layer complementing service checks. Local application is historical evidence; current database/production application was not reverified. The existing `P2002` regression mocks a constraint error rather than executing a live race.
 
 ---
 
@@ -700,7 +702,10 @@ Rules:
 
 - Soft-deleted records normally excluded from active queries.
 - Historical financial/lease data must be preserved.
-- Hard deletion only where explicitly justified.
+- No hard-delete business capability exists for Property, Unit, Tenant, Lease, or Payment in the inspected services/routes.
+- Leases use lifecycle transitions; Payments have no delete workflow and their Lease/Tenant relations use Restrict.
+- Operational database cascades and test cleanup are separate from business deletion workflows.
+- D-031/D-032 are not implemented and are inapplicable to current scope under D-037. A future hard-delete capability requires an explicit new decision.
 
 ---
 
@@ -722,15 +727,14 @@ Current backend scripts:
 
 ```text
 dev: ts-node-dev --respawn --transpile-only src/server.ts
-build: tsc
+build: npx prisma generate && tsc
 start: npx prisma migrate deploy && node dist/server.js
-postinstall: prisma generate
 ```
 
 Known issues:
 
-- `postinstall` Prisma generation is implicit.
-- Migration is coupled to application startup.
+- No `postinstall` exists; explicit generation was implemented in `4155c2e`. D-020 preserves the old configuration and target as history.
+- Migration is coupled to application startup; D-020's separate pre-deploy/start target is not established. No tracked Railway configuration was found and platform settings remain unverified.
 - Railway subscription expired.
 - Production deployment requires re-establishment.
 
@@ -745,6 +749,7 @@ DATABASE_URL
 JWT_SECRET
 PORT
 NODE_ENV
+FRONTEND_URL
 ```
 
 `JWT_SECRET` minimum length:
@@ -759,11 +764,7 @@ Frontend:
 NEXT_PUBLIC_API_URL
 ```
 
-Known gap:
-
-```text
-FRONTEND_URL is used for CORS but not validated by env.ts
-```
+`FRONTEND_URL` is URL-validated by `env.ts`. Production values and CORS behavior remain unverified.
 
 ---
 
@@ -798,24 +799,18 @@ Typed Prisma operations
 
 | Area | Problem | Priority |
 |------|---------|----------|
-| Lease | `deleteLease()` does not independently enforce ownership | P0 |
-| Lease | Some ownership/business checks remain in controller | P1 |
-| Property | Archive/restore logic bypasses property service | P1 |
-| Unit | Hard-delete lease-history check remains duplicated between controller/service | P1 |
-| Tenant | Hard-delete business-rule consolidation remains incomplete | P1 |
+| Lease | Review controller termination-reason validation boundary; service ownership checks exist | P1 |
+| Property | Two service soft-delete paths (`deleteProperty` / `archiveProperty`) remain | P1 |
+| Unit | Controller performs a direct property ownership read; mutations delegate to service | P1 |
 | Unit | `any` types in service layer | P1 |
-| Payment | Validation/business rules need consolidation | P1 |
+| Payment | D-025 rules are service-enforced; D-036 business decision remains pending | P1 |
 | Audit | Mutation + audit not consistently transactional | P1 |
 | Property | `unitCount` semantic drift | P1 |
 | Finance | Placeholder/static finance service exists | P1 |
 
 **Note:** P2.1 addressed the active-lease archive business-rule duplication for Unit and Tenant.
 
-The remaining Unit/Tenant debt now specifically relates to:
-- Hard-delete lease-history validation (P2.2a)
-- Tenant hard-delete business-rule consolidation (P2.2b)
-
-Note: P2.2c (standardization of the active-lease definition) is defined but implementation-wide standardization is pending.
+Property/Unit/Tenant archive and restore already delegate to ownership-checking services. No `deleteLease()` or Unit/Tenant hard-delete service capability exists. D-037 resolves the active-lease definition; D-031/D-032 do not schedule implementation in current scope. Remaining finance review includes archived-record filtering; D-026 remains pending for `unitCount` semantics.
 
 ---
 

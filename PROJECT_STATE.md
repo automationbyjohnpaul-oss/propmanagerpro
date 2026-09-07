@@ -1,10 +1,14 @@
 # PropManager Pro -- Project State
 
-**Last Updated:** September 3, 2026
+**Last Updated:** September 7, 2026
 
-**State:** [LOCKED] -- SSOT Baseline Verified Locally / P2.2 Inspection Confirmed
+**State:** P2.2 inspection complete / documentation reconciliation prepared for diff review
 
-**Current Development Mode:** Controlled SSOT consolidation and local verification
+**Current Development Mode:** Documentation-only reconciliation; no implementation changes
+
+Evidence boundary: September 7 source/configuration/test inspection at `82c475b`; the recorded 75/75 tests, builds, local API checks, and migration application remain historical and were not rerun. Changes since baseline `7b3e76c` were documentation-only. Production remains unverified.
+
+Implementation establishes current behavior; explicit decisions establish intended behavior. Flag any disagreement rather than treating either as proof of the other.
 
 ---
 
@@ -184,7 +188,7 @@ audit.service.ts
 
 The architecture is partially aligned with SSOT.
 
-However, some controllers still contain direct Prisma mutations and duplicate business rules.
+The inspected domain controllers delegate mutations to services. Remaining boundary review includes the unit controller's direct property ownership read and lease termination-reason validation in the controller. Controller reads for HTTP responses/audit context do not establish missing service authorization.
 
 Therefore: SSOT architecture is the target baseline, but the codebase is not yet fully SSOT-consolidated.
 
@@ -247,7 +251,7 @@ restoreLease()
 endLease()
 ```
 
-Active lease conflicts are currently checked when activating/restoring leases. These checks will be reviewed and standardized as part of P2.2.
+Creation/update and activation/restoration conflict checks use ACTIVE status. Termination/end eligibility, unit/tenant archive restrictions, and finance activity queries also use status. Date ordering validation and payment reporting periods do not define lease activity. D-033 is resolved through D-037; no standardization change is required.
 
 ### Database Invariant
 
@@ -313,7 +317,7 @@ for:
 - Units
 - Tenants
 
-Archive and restore functionality exists. Some controller implementations may still bypass corresponding service methods and require SSOT consolidation.
+Property, Unit, and Tenant archive/restore controllers call ownership-checking services. No hard-delete business method was found in those services or the Lease/Payment services. Test cleanup and database cascades are separate from business capabilities; D-031/D-032 are not implemented and are inapplicable to current scope under D-037.
 
 ---
 
@@ -335,8 +339,11 @@ Known items:
 
 ```text
 lib/api-client.ts appears unused
-AuthGuard usage unverified
+Standalone components/AuthGuard.tsx has no application references
+(app)/layout.tsx uses AuthContext as the application guard
 ```
+
+The layout covers dashboard, properties/units, tenants, leases, payments, finance, and More; login/register are outside it. AuthContext restores the saved user from localStorage. The layout hides children while loading or without a user and redirects unauthenticated users to /login. It does not validate JWT expiry on initialization. The backend verifies JWTs; API-client 401 handling clears stored token/user and redirects to login. This is source-confirmed behavior, not new end-to-end browser verification.
 
 ---
 
@@ -348,16 +355,13 @@ AuthGuard usage unverified
 - Supabase database password rotation required.
 
 **P1**
-- Service/controller SSOT duplication remains.
-- `deleteLease()` accepts userId but does not use it for ownership verification.
-- Property archive/restore logic may still exist directly in controller.
-- Unit archive/restore logic may still exist directly in controller.
-- Tenant archive/restore logic may be duplicated between controller/service.
+- Unit controller ownership read and lease controller termination-reason validation require service-boundary review.
+- Property `deleteProperty` and `archiveProperty` both implement soft deletion in the service; no controller mutation bypass was found.
 - `unit.service.ts` uses `any`.
-- Payment business rules require further consolidation.
+- Payment ownership and D-025 mutation rules are enforced in the service; D-036 remains an unresolved business decision.
 - Audit operations are not consistently transactional.
 - `Property.unitCount` can drift from actual Units.
-- `FRONTEND_URL` missing from environment validation.
+- `FRONTEND_URL` is already URL-validated in `env.ts`; production configuration remains unverified.
 - Development mode returns full stack traces.
 - Finance archived-property filtering requires review.
 
@@ -373,55 +377,39 @@ AuthGuard usage unverified
 
 ### Phase A -- SSOT Backend Consolidation
 
-**Status:** ACTIVE
+**Status:** Follow-up review only; no domain implementation is active during reconciliation. The items below distinguish existing behavior from remaining review; they do not declare whole-domain locks.
 
 #### A1 -- Lease SSOT
-- Move remaining business/ownership rules into lease service.
-- Ensure `deleteLease()` enforces ownership.
-- Remove unnecessary controller duplication.
-- Type service inputs.
-- Test.
-- Verify.
-- [LOCKED] Lock Lease domain.
+- Service ownership and status-based conflict/lifecycle checks exist; no `deleteLease()` exists.
+- Review termination-reason validation at the controller boundary and remaining `any` usage.
+- Test and verify only if a subsequent implementation change is approved.
 
 #### A2 -- Property SSOT
-- Consolidate archive/restore into service.
-- Ensure ownership is enforced by service.
-- Remove direct controller Prisma mutations.
-- Test.
-- Verify.
-- [LOCKED] Lock Property domain.
+- Archive/restore already delegate to ownership-checking services.
+- Review duplicate soft-delete service paths if consolidation is needed.
+- D-026 (`unitCount` semantics) remains pending; do not refactor it before a decision.
 
 #### A3 -- Unit SSOT
-- Consolidate archive/restore/delete rules.
-- Remove `any`.
-- Type transaction support correctly.
-- Test.
-- Verify.
-- [LOCKED] Lock Unit domain.
+- Archive protection and restore are already service-owned; P2.1 archive work remains the baseline.
+- Review the controller property lookup, remove `any` when scoped, and type transaction support.
+- No hard-delete implementation is scheduled under D-031/D-037.
 
 #### A4 -- Tenant SSOT
-- Consolidate archive/restore/delete rules.
-- Remove controller/service duplication.
-- Verify active-lease restrictions.
-- Test.
-- Verify.
-- [LOCKED] Lock Tenant domain.
+- Archive/restore and status-based active-lease restrictions are service-owned.
+- Preserve the P2.1 baseline; review further work only against a demonstrated gap.
+- No hard-delete implementation is scheduled under D-032/D-037.
 
 #### A5 -- Payment SSOT
-- Consolidate payment validation.
-- Confirm payment mutation policy.
-- Ensure ownership is authoritative in service.
-- Test financial integrity.
-- Verify.
-- [LOCKED] Lock Payment domain.
+- Preserve implemented D-025 ownership, immutability, and controlled update rules.
+- D-036 remains pending; refunds are deferred and no VOID/VOIDED workflow exists.
+- Identify a concrete gap before scheduling further consolidation.
 
 #### A6 -- Finance SSOT
 - Remove/retire misleading placeholder finance logic where appropriate.
-- Establish authoritative calculation source.
+- Preserve `financeAnalytics.service.ts` as the database-backed calculation source; review archived-record filtering.
 - Verify tenant isolation.
 - Verify financial calculations.
-- [LOCKED] Lock Finance domain.
+- Lock Finance domain only after its remaining scoped work is completed and verified.
 
 #### A7 -- Audit SSOT
 - Review audit coverage.
@@ -429,7 +417,7 @@ AuthGuard usage unverified
 - Establish consistent audit strategy.
 - Test.
 - Verify.
-- [LOCKED] Lock Audit domain.
+- Lock Audit domain only after its remaining scoped work is completed and verified.
 
 ---
 
@@ -465,21 +453,14 @@ Do not begin the next domain while the current domain remains unverified.
 
 ## 14. Current Immediate Objective
 
-Current action: P2.2 -- Documentation Lock / Implementation Boundary Confirmed.
+Current action: Review the six-document reconciliation diff before committing.
 
-Before changing code:
+P2.2 business-boundary and active-lease inspection is complete; no implementation or migration change was required. Documentation corrections are prepared for review. A documentation lock does not establish fresh test/build/database or production verification.
 
-1. Inspect current lease routes.
-2. Inspect lease validators.
-3. Inspect lease service.
-4. Identify every lease business rule currently implemented outside the service.
-5. Identify ownership gaps.
-6. Create the smallest safe refactor plan.
-7. Implement.
-8. Test/build.
-9. Verify.
-10. Update documentation.
-11. [LOCKED] Lock Lease domain.
+1. Inspect the actual documentation diff and consistency checks.
+2. Preserve D-026 and D-036 as pending and D-031/D-032 as not implemented.
+3. Commit only after user approval of the diff.
+4. Determine the next smallest controlled task from remaining evidence-backed work.
 
 ---
 
@@ -538,7 +519,7 @@ Re-lock
 
 ## 17. Local Verification Baseline
 
-Completed and confirmed locally:
+Historical local verification recorded before this reconciliation (not rerun):
 
 ```text
 Backend automated tests         -> 75/75 passed
@@ -565,6 +546,8 @@ PRODUCTION VERIFIED
 ---
 
 ## 18. Current Status
+
+Runtime/build/database confirmation markers below refer to the historical local baseline, not new execution. P2.2 implementation findings were checked by source inspection. Documentation reconciliation awaits diff review.
 
 ```text
 Documentation architecture       -> [LOCKED]
@@ -593,7 +576,7 @@ Production migration state       -> [PENDING] WAITING
 
 The next AI/session must NOT jump directly into unrelated feature development.
 
-Continue from: P2.2 -- Documentation Lock / Implementation Boundary Confirmed.
+Continue from: P2.2 inspection complete; review the documentation reconciliation diff before committing. No lease refactor is implicitly scheduled.
 
 Inspect the current implementation first.
 
@@ -671,8 +654,8 @@ Frontend Auth:                AuthContext + localStorage
 Primary API abstraction:      frontend/src/services/api.ts
 Backend authentication:       authMiddleware + JWT verification
 Tenant isolation:             Authenticated user ownership boundaries
-Current phase:                P2.2 INSPECTION COMPLETE / DOCUMENTATION LOCK
-Next engineering action:      Verify SSOT documentation, then determine the next controlled action
+Current phase:                P2.2 INSPECTION COMPLETE / RECONCILIATION DIFF REVIEW
+Next engineering action:      Review documentation diff; obtain approval before committing
 ```
 
 **Primary unresolved areas:**

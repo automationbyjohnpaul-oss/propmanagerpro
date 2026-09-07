@@ -26,6 +26,8 @@ When interpreting this document:
 
 ---
 
+Implementation describes observed behavior; an explicit decision describes intended behavior. A disagreement must be flagged, not silently resolved by document age.
+
 ## Decision Lifecycle
 
 ```
@@ -39,6 +41,8 @@ PENDING → DECIDED → IMPLEMENTED → VERIFIED
 | ⚪ Pending            | Decision required — do not implement until decided     |
 | 🔴 Rejected           | Approach explicitly rejected — do not reintroduce      |
 | 🟠 Implemented        | Applied but not yet verified in production             |
+
+Reconciliation note (September 7, 2026): historical status labels below are retained. A green label alone is not evidence of current production verification; use explicit verification scope and later resolution notes. Production remains unverified.
 
 > **Important:** Implementation status records whether the decision was implemented
 > at the time it was recorded. It does not override `PROJECT_STATE.md` or current
@@ -341,6 +345,8 @@ postgresql://postgres.[project-id]:[password]@aws-0-eu-west-1.pooler.supabase.co
 
 ## D-020 — Explicit Production Build Process
 
+**Current disposition (September 7, 2026):** Local build portion implemented in `4155c2e`: `build: npx prisma generate && tsc`, no `postinstall`. `start` remains `npx prisma migrate deploy && node dist/server.js`. The separate pre-deploy/start target below is not established by current scripts; Railway configuration and production execution remain unverified. Preserve the following status, old configuration, and target as the original record, not current configuration.
+
 **Status:** 🟡 Decided
 **Implementation:** ❌ Not yet applied
 
@@ -609,6 +615,8 @@ HTTP status 409.
 
 ### Deliberately Deferred
 
+**Later clarification (September 7, 2026):** The following records the P2.1 assumptions at the time. D-037 and the reconciliation dispositions for D-031/D-032/D-033 govern current scope; these historical bullets do not schedule implementation.
+
 The following related inconsistencies were identified but intentionally
 deferred to P2.2:
 
@@ -623,6 +631,8 @@ business behavior while restructuring code.
 ---
 
 ## D-031 — Unit Hard-Delete Lease-History Rule
+
+**Current disposition (September 7, 2026, approved reconciliation):** Not implemented; inapplicable to current business scope under D-037. Direct service inspection found no unit hard-delete capability. The original proposal below is preserved as history, not an active implementation obligation. Any future hard-delete capability requires an explicit new decision and must address lease-history protection before introduction.
 
 **Status:** 🟡 Decided
 
@@ -640,6 +650,8 @@ business behavior while restructuring code.
 
 ## D-032 — Tenant Hard-Delete Lease-History Rule
 
+**Current disposition (September 7, 2026, approved reconciliation):** Not implemented; inapplicable to current business scope under D-037. Direct service inspection found no tenant hard-delete capability. The original proposal below is preserved as history, not an active implementation obligation. Any future hard-delete capability requires an explicit new decision and must address lease-history protection before introduction.
+
 **Status:** 🟡 Decided
 
 **Implementation:** ❌ Not yet completed
@@ -655,6 +667,8 @@ business behavior while restructuring code.
 ---
 
 ## D-033 — Standard Active-Lease Definition
+
+**Resolution (September 7, 2026):** Resolved through later D-037. Existing lease, unit, tenant, and finance activity checks use `Lease.status = ACTIVE`; lease dates do not independently define activity. The status-only database index and existing archive tests for past-end-date ACTIVE leases support this finding. No standardization implementation was required; tests were inspected, not rerun. The original incomplete status and rationale below are retained as historical record, superseded by this resolution.
 
 **Status:** 🟡 Decided
 
@@ -770,6 +784,8 @@ Should PropManager Pro:
 ```text
 Active Lease = Lease.status == ACTIVE
 Lease startDate and endDate do not independently determine active status.
+```
+
 P2.2 inspection result: Existing implementation already follows the status-based active-lease definition across the inspected lease-dependent business rules. No code change was required.
 The existing database cascade relationships between operational records were reviewed. They were not changed because the supported application layer does not expose hard-delete operations for these domains and no demonstrated defect requires a schema migration.
 Important: This decision does not introduce a VOID/VOIDED payment workflow. Payment reversal semantics remain governed by D-025, and payments against ENDED leases remain governed by pending decision D-036.
@@ -793,6 +809,9 @@ D-031 and D-032 remain pending until their specific service-layer hard-delete
 lease-history behavior is explicitly verified and standardized.
 D-037 establishes the broader business boundary and active-lease definition;
 it does not by itself mark D-031 or D-032 as implemented.
+
+**Reconciliation clarification (September 7, 2026):** The conditional lock and pending wording above records the earlier handoff state. P2.2 inspection is complete; the six-document reconciliation is prepared for diff review before commit. D-031/D-032 remain not implemented and are inapplicable to current scope, as explicitly resolved in their notes; D-033 is resolved through this decision. No hard-delete service method was found, independently of route availability. D-026 and D-036 remain pending; D-025 continues to govern payments. Historical tests/builds/database checks were not rerun, and production remains unverified.
+
 Template for New Decisions
 ## D-XXX — [Title]
 

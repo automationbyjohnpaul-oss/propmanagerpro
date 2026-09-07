@@ -10,6 +10,19 @@ For current status, use `PROJECT_STATE.md`.
 
 # 2026
 
+## Documentation Reconciliation (September 7, 2026)
+
+* Reconciled six Markdown documents against source/configuration/test inspection at `82c475b`; prepared for diff review before commit.
+* Clarified that P2.2 inspection was complete without implementation or migration changes; earlier P2.2 implementation assumptions below are historical.
+* Preserved D-031/D-032 proposals as not implemented and inapplicable to current scope under D-037; resolved D-033 through D-037.
+* Preserved D-020's original configuration/target and recorded the local build portion implemented in `4155c2e`; production staging remains unverified.
+* Identified the actual `(app)` layout/AuthContext guard and separated source inspection from browser verification.
+* Corrected stale SSOT debt and environment-validation claims; fixed the unclosed D-037 code fence.
+* D-026 and D-036 remain pending. No VOID/VOIDED workflow was introduced.
+* No source, schema, migrations, tests, packages, or deployment configuration changed. The recorded 75/75 tests, builds, local API checks, and migration application were not rerun; production remains unverified.
+
+---
+
 ## P2.1 — Move Business Rules to Service Layer (August 2026)
 
 * Added `AppError` and `ConflictError` classes.
@@ -27,6 +40,8 @@ For current status, use `PROJECT_STATE.md`.
 ---
 
 ## P2.2c — Active Lease Standardization (Pending)
+
+Later clarification (September 7, 2026): this entry preserves the pending state recorded at the time. D-037 and the D-033 resolution establish that the existing status-based implementation already satisfies the definition; these bullets are not current pending work.
 
 * Recorded that the authoritative active-lease definition has not yet been finalized.
 * Standardization remains scheduled as P2.2 work.
@@ -96,6 +111,9 @@ For current status, use `PROJECT_STATE.md`.
 * Lease overlap prevention
 * Active lease validation
 * Payment void-only policy
+
+  Later clarification (September 7, 2026): this historical policy wording is superseded by D-025. It does not establish a current or previously verified VOID implementation; no VOID/VOIDED workflow exists in current code.
+
 * Finance calculations
 * Zod validation
 
@@ -137,6 +155,8 @@ For current status, use `PROJECT_STATE.md`.
 ---
 
 # Known Cleanup Areas
+
+Later clarification (September 7, 2026): the following preserves earlier cleanup tracking, not current TODO status. `4155c2e` removed the Prisma postinstall dependency; D-037 and the D-031/D-032 dispositions remove hard-delete work from current scope. See TODO.md and PROJECT_STATE.md for remaining work.
 
 The following are documented technical cleanup items and should not be interpreted as completed work:
 
