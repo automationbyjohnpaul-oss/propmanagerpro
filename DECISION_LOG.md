@@ -379,15 +379,16 @@ Start:      node dist/server.js
 
 ## D-021 — Non-Blocking Startup Health Checks
 
-**Status:** 🟡 Decided — under review
+**Status:** Superseded by the intentional fail-fast change in `1d71c69` (August 24, 2026).
 
-**Decision:** Startup database checks currently run without blocking server startup.
+**Original decision:** Startup database checks ran without blocking server startup.
 
-**Reason:** The existing implementation allows the server to start while health
-validation reports failures through logging.
+**Historical reason:** The implementation allowed the server to start while health
+validation reported failures through logging.
 
-**Future review:** Production hardening should determine whether critical
-dependency failure should prevent readiness declaration.
+**Subsequent evolution:** `1d71c69` replaced fire-and-forget validation with an awaited check before `app.listen()`. Current startup requires the database `SELECT 1` check to succeed; failure prevents listening and exits with code 1. The commit changed `server.ts` only, without updating this decision record.
+
+**Remaining review:** Startup connectivity and ongoing readiness are separate. `/health` is public HTTP liveness and does not query the database. Actual production monitoring/settings and runtime behavior remain unverified; this reconciliation is based on source and Git history, not new runtime tests.
 
 ---
 

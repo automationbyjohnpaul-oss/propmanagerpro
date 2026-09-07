@@ -482,6 +482,8 @@ Database (Supabase PostgreSQL)
 -> Current production schema/migration state UNVERIFIED
 ```
 
+Startup performs a blocking database connectivity check (`SELECT 1`) before listening; failure prevents server startup and exits with code 1. `/health` is a public liveness endpoint, not an ongoing database-readiness check. These are source-inspection findings; no startup-failure or production runtime test was performed during this audit.
+
 Do not treat production as verified until fresh evidence is collected.
 
 ---

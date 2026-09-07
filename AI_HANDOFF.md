@@ -358,9 +358,9 @@ Do not reintroduce reliance on implicit `postinstall` behavior.
 
 ## Startup
 
-Startup health checks have historically run non-blocking.
+Startup health checks originally ran non-blocking. Commit `1d71c69` (August 24, 2026) deliberately superseded that behavior: current startup awaits the database `SELECT 1` check before listening; failure prevents server startup and exits with code 1. See D-021 for the historical decision.
 
-Review whether production readiness should distinguish:
+The public `/health` endpoint reports HTTP liveness without querying the database. Production monitoring remains unverified. Keep the distinction between:
 
 ```text
 process running
