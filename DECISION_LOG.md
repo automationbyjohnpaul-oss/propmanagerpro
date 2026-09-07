@@ -699,6 +699,8 @@ business behavior while restructuring code.
 
 **Action:** Preserve the existing explicit cleanup approach and verify that each database-integrated test suite leaves the test database in a predictable state. Do not introduce a production hard-delete user feature based solely on test cleanup code.
 
+**Later clarification (September 7, 2026):** Explicit test-database isolation is separate from record cleanup. Vitest setup now loads local connection settings, rejects hosts other than `localhost`, rewrites the database name to `propmanagerpro_test`, and validates the resulting target before test/application imports. The dedicated database was initialized from the existing 14 migrations. Guard and Vitest integration checks passed, followed by 77/77 unit tests including two unit reassignment regressions. These results do not prove every cleanup path or failure case; the original cleanup decision and partially applied status remain. Development and production databases were not targeted by these tests.
+
 ---
 
 ## D-035 — Database-Level Active Lease Uniqueness

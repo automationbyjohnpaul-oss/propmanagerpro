@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "../../src/lib/prisma";
-import { createUnit, deleteUnit } from "../../src/services/unit.service";
+import { createUnit, deleteUnit, updateUnit } from "../../src/services/unit.service";
 import { ConflictError } from "../../src/lib/errors";
 
 describe("Unit Service - Archive", () => {
@@ -210,5 +210,152 @@ describe("Unit Service - Archive", () => {
     await prisma.unit.delete({ where: { id: otherUnit.id } });
     await prisma.property.delete({ where: { id: otherProperty.id } });
     await prisma.user.delete({ where: { id: otherUser.id } });
+  });
+
+  it("rejects moving a unit to a property owned by another user", async () => {
+    const userIds: string[] = [];
+    const propertyIds: string[] = [];
+    let unitId: string | undefined;
+
+    try {
+      const userA = await prisma.user.create({
+        data: {
+          email: `unit-auth-a-${Date.now()}@example.com`,
+          password: "test-password",
+          name: "Authorization Test User A",
+          role: "LANDLORD",
+        },
+      });
+      userIds.push(userA.id);
+
+      const userB = await prisma.user.create({
+        data: {
+          email: `unit-auth-b-${Date.now()}@example.com`,
+          password: "test-password",
+          name: "Authorization Test User B",
+          role: "LANDLORD",
+        },
+      });
+      userIds.push(userB.id);
+
+      const propertyA = await prisma.property.create({
+        data: {
+          name: "Authorization Test Property A",
+          address: "Authorization Test Address A",
+          city: "Test City",
+          state: "TS",
+          zip: "12345",
+          unitCount: 1,
+          userId: userA.id,
+        },
+      });
+      propertyIds.push(propertyA.id);
+
+      const propertyB = await prisma.property.create({
+        data: {
+          name: "Authorization Test Property B",
+          address: "Authorization Test Address B",
+          city: "Test City",
+          state: "TS",
+          zip: "12345",
+          unitCount: 1,
+          userId: userB.id,
+        },
+      });
+      propertyIds.push(propertyB.id);
+
+      const unitA = await createUnit(userA.id, {
+        propertyId: propertyA.id,
+        unitNumber: "AUTH-A",
+        bedrooms: 1,
+        bathrooms: 1,
+        rentAmount: 1000,
+      });
+      unitId = unitA.id;
+
+      await expect(
+        updateUnit(unitA.id, userA.id, {
+          propertyId: propertyB.id,
+        }),
+      ).rejects.toThrow();
+
+      const unchangedUnit = await prisma.unit.findUnique({
+        where: { id: unitA.id },
+      });
+
+      expect(unchangedUnit?.propertyId).toBe(propertyA.id);
+    } finally {
+      if (unitId) {
+        await prisma.unit.deleteMany({ where: { id: unitId } });
+      }
+      await prisma.property.deleteMany({
+        where: { id: { in: propertyIds } },
+      });
+      await prisma.user.deleteMany({
+        where: { id: { in: userIds } },
+      });
+    }
+  });
+
+  it("allows moving a unit between active properties owned by the same user", async () => {
+    const propertyIds: string[] = [];
+    let unitId: string | undefined;
+
+    try {
+      const propertyA = await prisma.property.create({
+        data: {
+          name: "Same Owner Property A",
+          address: "123 Same Owner Street",
+          city: "Test City",
+          state: "TS",
+          zip: "12345",
+          unitCount: 1,
+          userId: testUserId,
+          deletedAt: null,
+        },
+      });
+      propertyIds.push(propertyA.id);
+
+      const propertyB = await prisma.property.create({
+        data: {
+          name: "Same Owner Property B",
+          address: "456 Same Owner Street",
+          city: "Test City",
+          state: "TS",
+          zip: "12345",
+          unitCount: 1,
+          userId: testUserId,
+          deletedAt: null,
+        },
+      });
+      propertyIds.push(propertyB.id);
+
+      const unit = await createUnit(testUserId, {
+        propertyId: propertyA.id,
+        unitNumber: "SAME-OWNER",
+        bedrooms: 1,
+        bathrooms: 1,
+        rentAmount: 1000,
+      });
+      unitId = unit.id;
+
+      const updatedUnit = await updateUnit(unit.id, testUserId, {
+        propertyId: propertyB.id,
+      });
+
+      expect(updatedUnit.propertyId).toBe(propertyB.id);
+
+      const storedUnit = await prisma.unit.findUnique({
+        where: { id: unit.id },
+      });
+      expect(storedUnit?.propertyId).toBe(propertyB.id);
+    } finally {
+      if (unitId) {
+        await prisma.unit.deleteMany({ where: { id: unitId } });
+      }
+      await prisma.property.deleteMany({
+        where: { id: { in: propertyIds } },
+      });
+    }
   });
 });

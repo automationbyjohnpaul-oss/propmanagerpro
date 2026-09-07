@@ -283,7 +283,17 @@ PROJECT_STATE.md
 
 # Current Development Phase
 
-[P2.2 INSPECTION COMPLETE / DOCUMENTATION RECONCILIATION DIFF REVIEW]
+[UNIT AUTHORIZATION FIX VERIFIED LOCALLY / FINAL DIFF REVIEW]
+
+Fresh local verification (September 7, 2026): the cross-user unit reassignment defect was reproduced at the service layer, then fixed. Both reassignment regression tests passed; `npm run test:unit` passed 77/77 tests in 7 files against `localhost:5432/propmanagerpro_test`. The existing 14 migrations were applied to that dedicated database; no schema or migration files changed. The development database was not targeted. No fresh backend build, HTTP reproduction, or production verification was performed. The Vite module-format warning persists and remains separate tooling maintenance.
+
+`updateUnit()` now requires a supplied destination `propertyId` to identify an active property owned by the authenticated user. Preserve both cross-user rejection and same-user reassignment coverage.
+
+Vitest loads `tests/setup/test-database.ts` before test modules: it loads local environment settings, rejects non-`localhost` hosts, and rewrites the database name to `propmanagerpro_test`. Isolated guard and Vitest integration checks passed; temporary verification files were removed. Fixture cleanup is separate from database isolation and is not universally proven by passing tests.
+
+Next: review SSOT and the complete diff before staging/committing. Seven-day JWT production suitability remains a pending risk-acceptance decision; the policy is unchanged.
+
+## Historical P2.2 checkpoint
 
 The recorded local verification baseline is historical. The 75/75 tests, builds, local API checks, and migration application were not rerun during reconciliation; production remains unverified. September 7 source inspection at `82c475b` supports the P2.2 findings below.
 
@@ -307,7 +317,7 @@ for these business records.
 No hard-delete business service capability was found, independently of routes.
 D-031/D-032 are not implemented and are inapplicable to current scope under D-037.
 D-033 is resolved through D-037; D-026 and D-036 remain pending.
-The six-document reconciliation is prepared for diff review before commit.
+The earlier six-document reconciliation was subsequently committed and published; it is not the current pending diff.
 Do not treat a documentation lock as new runtime or production verification.
 The next engineering task must be determined from the updated
 PROJECT_STATE.md and TODO.md, rather than assuming that P2.2 still requires

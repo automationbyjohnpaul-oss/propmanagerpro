@@ -27,7 +27,7 @@ Current implementation status belongs in `PROJECT_STATE.md`.
 
 ## P2.2 — Business Boundary and Active-Lease Inspection ✅ COMPLETE
 
-P2.2 inspection is complete; no implementation change was required. The six-document reconciliation is prepared for diff review before commit. This completion refers to inspection, not fresh runtime verification or completion of every historical P2.2 proposal.
+P2.2 inspection is complete; no implementation change was required. The earlier six-document reconciliation was committed and published; the current pending diff concerns unit authorization and test isolation. This completion refers to inspection, not fresh runtime verification or completion of every historical P2.2 proposal.
 
 Confirmed:
 
@@ -137,9 +137,11 @@ Current source-inspected behavior includes (not newly verified end-to-end):
 - AuthContext restores the saved user without validating JWT expiry on initialization; backend verification and API 401 handling enforce expiry when requests occur.
 - Dashboard, properties/units, tenants, leases, payments, finance, and More are inside the guarded group; login/register are outside it.
 
+- [x] Fix unit destination-property authorization; cross-user rejection and same-user active-property reassignment regressions pass locally.
+
 The following remain **review items**, not assumptions that the current implementation is defective:
 
-- [ ] Review whether the 7-day JWT expiration policy is appropriate for production.
+- [ ] Resolve production risk acceptance for the existing 7-day JWT policy. Implementation and documentation align; no duration change was made. No acceptable stolen-token exposure window is documented.
 - [ ] Review the security implications of storing JWTs in `localStorage`.
 - [ ] Decide whether a refresh-token/session-renewal strategy is required.
 - [ ] Review session-expiration UX.
@@ -198,13 +200,19 @@ tenant.service.test.ts
 unit.service.test.ts
 ```
 
-The historical local baseline records (not rerun during this reconciliation):
+The earlier documentation reconciliation recorded this historical baseline:
 
 ```text
 75/75 tests passing
 ```
 
-Existing test source covers authentication, ownership checks, lease rules, payment rules, finance calculations, and archive behavior, including ACTIVE leases with past end dates. The active-lease conflict regression mocks a Prisma `P2002` error; it does not itself run concurrent database requests. Current database index application and production behavior were not reverified.
+Existing test source covers authentication, ownership checks, lease rules, payment rules, finance calculations, and archive behavior, including ACTIVE leases with past end dates. The active-lease conflict regression mocks a Prisma `P2002` error; it does not itself run concurrent database requests. That earlier inspection did not reverify database index application or production behavior. The current test-database migration application is recorded below; production remains unverified.
+
+### Current local verification — September 7, 2026
+
+Fresh local verification (September 7, 2026): the cross-user unit reassignment defect was reproduced at the service layer, then fixed. Both reassignment regression tests passed; `npm run test:unit` passed 77/77 tests in 7 files against `localhost:5432/propmanagerpro_test`. The existing 14 migrations were applied to that dedicated database; no schema or migration files changed. The development database was not targeted. No fresh backend build, HTTP reproduction, or production verification was performed. The Vite module-format warning persists and remains separate tooling maintenance.
+
+Vitest setup rejects non-local hosts and explicitly selects `propmanagerpro_test` before application imports. Isolation does not replace fixture cleanup. Authentication issuance-lifetime, middleware/HTTP 401, and logout/session coverage remain separate review gaps in the inspected locations. The authorization regressions are service tests, not HTTP tests.
 
 ### Remaining testing work
 

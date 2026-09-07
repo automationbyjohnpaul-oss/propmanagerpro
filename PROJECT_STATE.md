@@ -2,11 +2,13 @@
 
 **Last Updated:** September 7, 2026
 
-**State:** P2.2 inspection complete / documentation reconciliation prepared for diff review
+**State:** Unit reassignment authorization fix verified locally / SSOT and final diff review pending
 
-**Current Development Mode:** Documentation-only reconciliation; no implementation changes
+**Current Development Mode:** SSOT reconciliation for the verified authorization fix and isolated test infrastructure; no further implementation work scheduled
 
-Evidence boundary: September 7 source/configuration/test inspection at `82c475b`; the recorded 75/75 tests, builds, local API checks, and migration application remain historical and were not rerun. Changes since baseline `7b3e76c` were documentation-only. Production remains unverified.
+Evidence boundary: the earlier 75/75 baseline, builds, and local API checks remain historical. The current authorization change has fresh local unit-suite verification, recorded below; production remains unverified.
+
+Fresh local verification (September 7, 2026): the cross-user unit reassignment defect was reproduced at the service layer, then fixed. Both reassignment regression tests passed; `npm run test:unit` passed 77/77 tests in 7 files against `localhost:5432/propmanagerpro_test`. The existing 14 migrations were applied to that dedicated database; no schema or migration files changed. The development database was not targeted. No fresh backend build, HTTP reproduction, or production verification was performed. The Vite module-format warning persists and remains separate tooling maintenance.
 
 Implementation establishes current behavior; explicit decisions establish intended behavior. Flag any disagreement rather than treating either as proof of the other.
 
@@ -299,7 +301,9 @@ Payment -> Lease -> Property -> userId
 
 This remains a critical security invariant.
 
-**Local verification:** explicitly tested cross-user property access and received 404. Tenant isolation holds locally.
+`updateUnit()` checks ownership of the existing unit. When `propertyId` is supplied, the destination property must also belong to the authenticated user and have `deletedAt: null`. Cross-user reassignment is rejected before mutation; reassignment between the same user's active properties remains allowed. Regression tests verify the unchanged property after rejection and the persisted destination after an allowed update.
+
+**Historical local verification:** cross-user property access returned 404. This earlier HTTP check is distinct from the current service-level unit reassignment regressions and does not establish exhaustive tenant-isolation coverage.
 
 ---
 
@@ -456,7 +460,7 @@ Do not begin the next domain while the current domain remains unverified.
 
 Current action: Review the six-document reconciliation diff before committing.
 
-P2.2 business-boundary and active-lease inspection is complete; no implementation or migration change was required. Documentation corrections are prepared for review. A documentation lock does not establish fresh test/build/database or production verification.
+P2.2 business-boundary and active-lease inspection is complete; no implementation or migration change was required. The earlier P2.2 documentation corrections were subsequently committed and published. A documentation lock does not establish fresh test/build/database or production verification.
 
 1. Inspect the actual documentation diff and consistency checks.
 2. Preserve D-026 and D-036 as pending and D-031/D-032 as not implemented.
@@ -522,7 +526,7 @@ Re-lock
 
 ## 17. Local Verification Baseline
 
-Historical local verification recorded before this reconciliation (not rerun):
+Historical local verification from before the current authorization fix (preserved as recorded; fresh unit-suite results appear above):
 
 ```text
 Backend automated tests         -> 75/75 passed
@@ -550,7 +554,7 @@ PRODUCTION VERIFIED
 
 ## 18. Current Status
 
-Runtime/build/database confirmation markers below refer to the historical local baseline, not new execution. P2.2 implementation findings were checked by source inspection. Documentation reconciliation awaits diff review.
+Runtime/build/database confirmation markers below refer to the historical local baseline, not new execution. P2.2 implementation findings were checked by source inspection. The current authorization-fix and SSOT diff awaits review.
 
 ```text
 Documentation architecture       -> [LOCKED]
@@ -579,7 +583,7 @@ Production migration state       -> [PENDING] WAITING
 
 The next AI/session must NOT jump directly into unrelated feature development.
 
-Continue from: P2.2 inspection complete; review the documentation reconciliation diff before committing. No lease refactor is implicitly scheduled.
+Continue from: unit reassignment authorization fix and 77/77 unit tests verified locally. Review the SSOT and complete working-tree diff before staging or committing; no commit or push is authorized by this checkpoint. No lease refactor is implicitly scheduled.
 
 Inspect the current implementation first.
 
@@ -657,7 +661,7 @@ Frontend Auth:                AuthContext + localStorage
 Primary API abstraction:      frontend/src/services/api.ts
 Backend authentication:       authMiddleware + JWT verification
 Tenant isolation:             Authenticated user ownership boundaries
-Current phase:                P2.2 INSPECTION COMPLETE / RECONCILIATION DIFF REVIEW
+Current phase:                UNIT AUTHORIZATION FIX VERIFIED / FINAL DIFF REVIEW
 Next engineering action:      Review documentation diff; obtain approval before committing
 ```
 

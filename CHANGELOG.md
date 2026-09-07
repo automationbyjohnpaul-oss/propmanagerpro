@@ -10,6 +10,18 @@ For current status, use `PROJECT_STATE.md`.
 
 # 2026
 
+## Unit Reassignment Authorization and Test Isolation (September 7, 2026)
+
+* Reproduced a service-level defect allowing a user to move their unit to another user's property and receive that property's details.
+* Added destination-property ownership and active-status validation to `updateUnit()`; same-user active-property reassignment remains allowed.
+* Added cross-user rejection and same-user success regressions, including persisted relationship assertions and `finally` cleanup.
+* Added Vitest configuration/setup selecting local `propmanagerpro_test` before test imports and rejecting remote hosts. Verified the guard in isolation and through Vitest; removed temporary verification artifacts.
+* Initialized the dedicated local test database using the existing 14 migrations. No schema or migration files changed; the development database was not targeted.
+* Fresh verification: both focused regressions passed and the unit suite passed 77/77 across 7 files. Earlier 75/75 records below remain historical. No fresh backend build, HTTP reproduction, or production verification was performed.
+* JWT lifetime remains seven days; production suitability is pending. The non-blocking Vite module-format warning remains unchanged.
+
+---
+
 ## Documentation Reconciliation (September 7, 2026)
 
 * Reconciled six Markdown documents against source/configuration/test inspection at `82c475b`; prepared for diff review before commit.

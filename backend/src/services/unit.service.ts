@@ -99,6 +99,20 @@ export async function updateUnit(
     throw new Error("Unit not found");
   }
 
+  if (data.propertyId !== undefined) {
+    const property = await client.property.findFirst({
+      where: {
+        id: data.propertyId,
+        userId,
+        deletedAt: null,
+      },
+    });
+
+    if (!property) {
+      throw new Error("Property not found or access denied");
+    }
+  }
+
   return client.unit.update({
     where: { id },
     data,

@@ -260,6 +260,8 @@ Payment -> Payment.lease.property.userId
 
 The service layer must not rely solely on a controller having performed an ownership check.
 
+For unit updates, `updateUnit()` verifies the existing unit belongs to the authenticated user. If `propertyId` is supplied, it also verifies the destination property belongs to that user and is active (`deletedAt: null`) before updating. Reassignment between the same user's active properties is permitted; cross-user reassignment is rejected. This enforces the existing ownership boundary without changing JWT policy.
+
 A service accepting:
 
 ```ts
