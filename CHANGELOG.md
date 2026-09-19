@@ -10,6 +10,14 @@ For current status, use `PROJECT_STATE.md`.
 
 # 2026
 
+## Payment Creation Audit Atomicity (September 19, 2026)
+
+* Reproduced HTTP 500 with a committed payment when the audit insert fails in the local test database.
+* Wrapped payment creation and its audit in one controller-owned Prisma transaction; preserved service business rules and the pre-existing payment-record helper.
+* Added five HTTP/database integration regressions covering success, audit insert failure, failure after the audit insert, rejected lease access, and input validation. Both rollback tests failed before the fix and passed afterward.
+* Verification: existing baseline 77/77; full backend suite 82/82 across 8 files; backend source `tsc --noEmit` passed. Tests use guarded localhost `propmanagerpro_test`; authenticated identity is supplied by the HTTP harness.
+* No new dependencies, schema/migration changes, or production verification. Payment-update atomicity and idempotency remain separate work. Recorded D-038 and synchronized current-state/continuation documentation.
+
 ## Unit Reassignment Authorization and Test Isolation (September 7, 2026)
 
 * Reproduced a service-level defect allowing a user to move their unit to another user's property and receive that property's details.

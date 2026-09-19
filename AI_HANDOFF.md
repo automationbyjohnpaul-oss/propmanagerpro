@@ -283,7 +283,15 @@ PROJECT_STATE.md
 
 # Current Development Phase
 
-[UNIT AUTHORIZATION FIX VERIFIED LOCALLY / FINAL DIFF REVIEW]
+[H1 PAYMENT CREATION ATOMICITY VERIFIED LOCALLY / DIFF REVIEWED]
+
+September 19 continuation: repository HEAD was `690eb0b`; an existing uncommitted extraction of `createPaymentRecord()` was preserved. The property-service test checkpoint showed persisted success assertions, not rollback coverage. D-025 assigns audit orchestration to the controller, so D-038 uses a controller-owned transaction with a shared client for payment service checks/write and audit creation.
+
+Five tests in `backend/tests/integration/payment.controller.test.ts` exercise real HTTP routes, validation, controller/services, error middleware, and local PostgreSQL. The harness supplies identity rather than testing JWT. Both rollback regressions failed before the fix with a committed payment and HTTP 500; all five passed afterward. Existing baseline was freshly confirmed as 77/77, then `npm test` passed 82/82 in 8 files; backend source `tsc --noEmit` passed. See PROJECT_STATE.md for current evidence boundaries.
+
+The user reviewed the service/controller diff and authorized the Git checkpoint. Next: verify current Git state, then design idempotency separately. No idempotency or payment-update atomicity guarantee was added. Duplicate-on-retry remains unproven; H2 stays paused. No migrations, production configuration, or deployment changes were made; no push is authorized.
+
+### Historical September 7 verification
 
 Fresh local verification (September 7, 2026): the cross-user unit reassignment defect was reproduced at the service layer, then fixed. Both reassignment regression tests passed; `npm run test:unit` passed 77/77 tests in 7 files against `localhost:5432/propmanagerpro_test`. The existing 14 migrations were applied to that dedicated database; no schema or migration files changed. The development database was not targeted. No fresh backend build, HTTP reproduction, or production verification was performed. The Vite module-format warning persists and remains separate tooling maintenance.
 
@@ -291,7 +299,7 @@ Fresh local verification (September 7, 2026): the cross-user unit reassignment d
 
 Vitest loads `tests/setup/test-database.ts` before test modules: it loads local environment settings, rejects non-`localhost` hosts, and rewrites the database name to `propmanagerpro_test`. Isolated guard and Vitest integration checks passed; temporary verification files were removed. Fixture cleanup is separate from database isolation and is not universally proven by passing tests.
 
-Next: review SSOT and the complete diff before staging/committing. Seven-day JWT production suitability remains a pending risk-acceptance decision; the policy is unchanged.
+Historical next step was SSOT/diff review for the authorization fix, subsequently committed as `690eb0b`. Seven-day JWT production suitability remains a pending risk-acceptance decision; the policy is unchanged.
 
 ## Historical P2.2 checkpoint
 

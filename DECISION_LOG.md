@@ -815,6 +815,24 @@ it does not by itself mark D-031 or D-032 as implemented.
 
 **Reconciliation clarification (September 7, 2026):** The conditional lock and pending wording above records the earlier handoff state. P2.2 inspection is complete; the six-document reconciliation is prepared for diff review before commit. D-031/D-032 remain not implemented and are inapplicable to current scope, as explicitly resolved in their notes; D-033 is resolved through this decision. No hard-delete service method was found, independently of route availability. D-026 and D-036 remain pending; D-025 continues to govern payments. Historical tests/builds/database checks were not rerun, and production remains unverified.
 
+## D-038 — Atomic Payment Creation and Audit
+
+**Date:** September 19, 2026
+
+**Status:** Implemented; verified locally; service/controller diff reviewed by the user
+
+**Decision:** The payment creation controller owns one Prisma interactive transaction and passes its client to the payment service and existing audit service. HTTP 201 is sent only after commit.
+
+**Reason:** Source inspection and HTTP/database regressions established that audit failure previously returned HTTP 500 while leaving a committed payment. D-025 assigns HTTP/audit orchestration to the controller and business rules to the service. A controller-owned boundary preserves those responsibilities without adding a workflow abstraction or rewriting the audit service.
+
+**Impact:** `createPayment()` accepts an optional transaction client (defaulting to Prisma for existing callers); ownership/relationship checks and payment insertion use that client. The pre-existing payment-record helper is retained. Audit failures propagate to existing error middleware after rollback. Direct service callers remain responsible for their audit orchestration.
+
+**Verification:** Five HTTP/database tests cover committed success, a real audit foreign-key failure, an exception after audit insertion, rejected lease access, and invalid input. Both rollback regressions failed before the change and passed afterward. Full backend suite: 82/82 across 8 files; backend source TypeScript check passed. The HTTP test harness supplies user identity; JWT and production deployment were not verified.
+
+**Scope:** Creation only. Payment-update atomicity and idempotency remain separate work. No broad uniqueness constraints, schema/migrations, new dependencies, authentication changes, or production changes.
+
+---
+
 Template for New Decisions
 ## D-XXX — [Title]
 

@@ -8,6 +8,7 @@ import {
 } from "../services/payment.service";
 import { createAuditLog } from "../services/audit.service";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { prisma } from "../lib/prisma";
 
 // ============================================
 // HELPERS
@@ -52,15 +53,27 @@ export const getPayment = asyncHandler(async (req: Request, res: Response) => {
 export const createPaymentHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getUserId(req);
-    const payment = await createPayment(userId, req.body);
+    // Payment and its audit must commit or roll back together.
+    const payment = await prisma.$transaction(async (tx) => {
+      const createdPayment = await createPayment(userId, req.body, tx);
 
-    await createAuditLog(userId, "CREATE_PAYMENT", "Payment", payment.id, {
-      amount: Number(payment.amount),
-      method: payment.method,
-      status: payment.status,
-      leaseId: payment.leaseId,
-      tenantId: payment.tenantId,
-      paymentDate: payment.paymentDate,
+      await createAuditLog(
+        userId,
+        "CREATE_PAYMENT",
+        "Payment",
+        createdPayment.id,
+        {
+          amount: Number(createdPayment.amount),
+          method: createdPayment.method,
+          status: createdPayment.status,
+          leaseId: createdPayment.leaseId,
+          tenantId: createdPayment.tenantId,
+          paymentDate: createdPayment.paymentDate,
+        },
+        tx,
+      );
+
+      return createdPayment;
     });
 
     return res.status(201).json(payment);

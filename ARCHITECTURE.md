@@ -1,12 +1,12 @@
 ﻿# PropManager Pro -- Architecture
 
-**Last Updated:** September 7, 2026
+**Last Updated:** September 19, 2026
 
 **Architecture State:** [LOCKED] -- SSOT Architecture Baseline
 
-**Current Focus:** Documentation reconciliation diff review; no implementation changes
+**Current Focus:** H1 payment creation + audit atomicity (D-038); locally verified
 
-September 7 source/configuration inspection supports the current descriptions. Historical local tests/builds/database verification were not rerun; production remains unverified. The architecture baseline lock is not a claim that all domain debt or this reconciliation review is complete.
+The September 7 source/configuration inspection supports the baseline descriptions. September 19 verification establishes payment creation atomicity through HTTP/database regressions, 82/82 backend tests, and a backend source TypeScript check; see PROJECT_STATE.md. Historical deployment/build evidence remains separate, and production remains unverified. The architecture baseline lock does not imply that all domain debt is resolved.
 
 ---
 
@@ -659,6 +659,10 @@ Audit fields:
 - `entityId`
 - `metadata`
 - `timestamp`
+
+Payment creation now uses a controller-owned Prisma interactive transaction (D-038). The controller passes the same transaction client to `createPayment()` and `createAuditLog()`, and returns HTTP 201 only after commit. Ownership and relationship checks remain in the payment service and use that client. The existing payment-record helper is retained; the audit service remains unchanged.
+
+This guarantee applies to the payment creation HTTP workflow. Direct service callers must arrange their own audit workflow. Payment updates and other mutation/audit pairs are not established as atomic by this change. Idempotency remains a separate requirement.
 
 Future hardening should prefer transactional mutation + audit where required.
 

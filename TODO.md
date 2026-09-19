@@ -6,6 +6,15 @@ This document contains future work and intentionally limited follow-up work.
 
 Current implementation status belongs in `PROJECT_STATE.md`.
 
+## H1 - Financial Integrity (September 19, 2026)
+
+- [x] Payment creation + audit atomicity: locally verified; see PROJECT_STATE.md and D-038.
+- [x] Review H1 atomicity diff with the user; include the verified change in its Git checkpoint before the next implementation phase.
+- [ ] Design logical payment request identity, retry/concurrency handling, and response replay before implementing idempotency. Preserve distinct legitimate payments; do not infer uniqueness from lease/amount or reference. Duplicate-on-retry remains an unproven risk.
+- [ ] Address payment-update mutation/audit atomicity in a separately scoped step; the creation fix does not cover updates.
+
+H2 database isolation investigation remains paused while H1 is active.
+
 ---
 
 # Completed

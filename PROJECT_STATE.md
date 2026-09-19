@@ -1,12 +1,14 @@
 # PropManager Pro -- Project State
 
-**Last Updated:** September 7, 2026
+**Last Updated:** September 19, 2026
 
-**State:** Unit reassignment authorization fix verified locally / SSOT and final diff review pending
+**State:** H1 payment creation + audit atomicity verified locally; reviewed for Git checkpoint
 
-**Current Development Mode:** SSOT reconciliation for the verified authorization fix and isolated test infrastructure; no further implementation work scheduled
+**Current Development Mode:** H1 financial integrity, small evidence-led changes; idempotency design remains pending
 
-Evidence boundary: the earlier 75/75 baseline, builds, and local API checks remain historical. The current authorization change has fresh local unit-suite verification, recorded below; production remains unverified.
+Fresh local verification (September 19, 2026): the existing unit suite passed 77/77 before changes. New HTTP/database regression tests reproduced the payment creation atomicity gap: an audit insert failure returned HTTP 500 with a payment still committed. The creation controller now uses one Prisma interactive transaction for service checks, payment creation, and audit creation. HTTP 201 follows commit. Both rollback regressions then passed; `npm test` passed 82/82 tests in 8 files against the guarded `localhost/propmanagerpro_test` database, and `tsc --noEmit` passed for backend source. The HTTP harness supplies authenticated identity; JWT verification is not covered by these new tests. No schema/migrations, production configuration, or audit-service implementation changed. The pre-existing uncommitted payment-record helper was preserved.
+
+Evidence boundary: this establishes payment **creation** atomicity only. Direct service callers still own audit orchestration. Payment updates still perform mutation and audit separately. Idempotency is not implemented; duplicate-on-retry remains an unproven risk, and no payment uniqueness rule was added. Production and deployment remain unverified; no fresh full build was run. The existing Vite module-format warning remains.
 
 Fresh local verification (September 7, 2026): the cross-user unit reassignment defect was reproduced at the service layer, then fixed. Both reassignment regression tests passed; `npm run test:unit` passed 77/77 tests in 7 files against `localhost:5432/propmanagerpro_test`. The existing 14 migrations were applied to that dedicated database; no schema or migration files changed. The development database was not targeted. No fresh backend build, HTTP reproduction, or production verification was performed. The Vite module-format warning persists and remains separate tooling maintenance.
 
@@ -583,7 +585,7 @@ Production migration state       -> [PENDING] WAITING
 
 The next AI/session must NOT jump directly into unrelated feature development.
 
-Continue from: unit reassignment authorization fix and 77/77 unit tests verified locally. Review the SSOT and complete working-tree diff before staging or committing; no commit or push is authorized by this checkpoint. No lease refactor is implicitly scheduled.
+Continue from: H1 payment creation + audit atomicity (D-038), verified locally with 82/82 backend tests and a passing backend source TypeScript check. The user reviewed the service/controller diff and authorized the Git checkpoint. Verify current Git state, then design idempotency separately before implementation. Payment-update atomicity remains open; H2 stays paused. No push, deployment, or lease refactor is authorized by this checkpoint.
 
 Inspect the current implementation first.
 

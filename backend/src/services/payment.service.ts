@@ -22,9 +22,13 @@ interface UpdatePaymentData {
   notes?: string;
 }
 
-export async function createPayment(userId: string, data: CreatePaymentData) {
+export async function createPayment(
+  userId: string,
+  data: CreatePaymentData,
+  client: Prisma.TransactionClient = prisma,
+) {
   // 1. Verify lease ownership
-  const lease = await prisma.lease.findFirst({
+  const lease = await client.lease.findFirst({
     where: {
       id: data.leaseId,
       property: {
@@ -39,7 +43,7 @@ export async function createPayment(userId: string, data: CreatePaymentData) {
   }
 
   // 2. Verify tenant ownership
-  const tenant = await prisma.tenant.findFirst({
+  const tenant = await client.tenant.findFirst({
     where: {
       id: data.tenantId,
       userId,
@@ -67,21 +71,15 @@ export async function createPayment(userId: string, data: CreatePaymentData) {
   const initialStatus = status || PaymentStatus.pending;
 
   // 6. CREATE PAYMENT
-  return prisma.payment.create({
-    data: {
-      amount: new Prisma.Decimal(data.amount),
-      paymentDate: data.paymentDate ? new Date(data.paymentDate) : new Date(),
-      method: data.method,
-      status: initialStatus,
-      reference: data.reference,
-      notes: data.notes,
-      leaseId: data.leaseId,
-      tenantId: data.tenantId,
-    },
-    include: {
-      lease: true,
-      tenant: true,
-    },
+  return createPaymentRecord(client, {
+    amount: data.amount,
+    paymentDate: data.paymentDate,
+    method: data.method,
+    status: initialStatus,
+    reference: data.reference,
+    notes: data.notes,
+    leaseId: data.leaseId,
+    tenantId: data.tenantId,
   });
 }
 
@@ -208,3 +206,51 @@ export async function updatePayment(
 }
 
 // REMOVED: deletePayment function - payments should never be deleted
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates a payment record using the provided Prisma client.
+ *
+ * IMPORTANT: This helper does NOT resolve or default `status`. The caller must
+ * pass a fully resolved `PaymentStatus`. This is intentional so the helper can
+ * be safely reused inside a `prisma.$transaction` without re-running business
+ * rules such as the "cannot create as REFUNDED" check.
+ *
+ * The `client` parameter is typed as `Prisma.TransactionClient` so that either
+ * the top-level `prisma` client or a transaction client (`tx`) can be passed
+ * in. This enables composable transactional workflows without duplicating
+ * payment creation logic.
+ */
+async function createPaymentRecord(
+  client: Prisma.TransactionClient,
+  data: {
+    amount: number;
+    paymentDate?: string | Date;
+    method: PaymentMethod;
+    status: PaymentStatus;
+    reference?: string;
+    notes?: string;
+    leaseId: string;
+    tenantId: string;
+  },
+) {
+  return client.payment.create({
+    data: {
+      amount: new Prisma.Decimal(data.amount),
+      paymentDate: data.paymentDate ? new Date(data.paymentDate) : new Date(),
+      method: data.method,
+      status: data.status,
+      reference: data.reference,
+      notes: data.notes,
+      leaseId: data.leaseId,
+      tenantId: data.tenantId,
+    },
+    include: {
+      lease: true,
+      tenant: true,
+    },
+  });
+}
