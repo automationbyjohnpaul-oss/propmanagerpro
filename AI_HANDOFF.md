@@ -744,6 +744,20 @@ At the beginning of a new AI session:
 
 Do not ask the user to repeat information that can be established from the project documentation and source code.
 
+## Local Database Migration Check
+
+Before continuing H2 or running browser acceptance tests, confirm that the active local database has no pending Prisma migrations.
+
+Run `npx prisma migrate status` from the `backend` directory.
+
+The expected condition is that there are no pending migrations and the local database is up to date with the Prisma migration history.
+
+The H1 browser verification initially used a local database where:
+
+`20260919150000_add_payment_create_requests`
+
+was pending. After applying migrations, verification passed.
+
 ---
 
 # AI Session End / Handoff Procedure
