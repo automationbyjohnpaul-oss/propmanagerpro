@@ -4,9 +4,9 @@
 
 **Architecture State:** [LOCKED] -- SSOT Architecture Baseline
 
-**Current Focus:** H1 payment creation + audit atomicity (D-038); locally verified
+**Current Focus:** H1 payment creation idempotency and frontend persistent recovery (D-039); local automated checks pass, real-browser acceptance pending
 
-The September 7 source/configuration inspection supports the baseline descriptions. September 19 verification establishes payment creation atomicity through HTTP/database regressions, 82/82 backend tests, and a backend source TypeScript check; see PROJECT_STATE.md. Historical deployment/build evidence remains separate, and production remains unverified. The architecture baseline lock does not imply that all domain debt is resolved.
+The September 7 source/configuration inspection supports the baseline descriptions. Latest September 19 verification passes 120 backend tests, 25 simulated frontend recovery tests, backend source types, targeted frontend lint and the frontend production build. See PROJECT_STATE.md for the local-only migration and remaining real-browser/release checks. Production remains unverified. The architecture baseline lock does not imply that all domain debt is resolved.
 
 ---
 
@@ -662,7 +662,9 @@ Audit fields:
 
 Payment creation now uses a controller-owned Prisma interactive transaction (D-038). The controller passes the same transaction client to `createPayment()` and `createAuditLog()`, and returns HTTP 201 only after commit. Ownership and relationship checks remain in the payment service and use that client. The existing payment-record helper is retained; the audit service remains unchanged.
 
-This guarantee applies to the payment creation HTTP workflow. Direct service callers must arrange their own audit workflow. Payment updates and other mutation/audit pairs are not established as atomic by this change. Idempotency remains a separate requirement.
+This guarantee applies to the payment creation HTTP workflow. Direct service callers must arrange their own audit workflow. Payment updates and other mutation/audit pairs are not established as atomic by this change.
+
+D-039 extends that controller-owned transaction with a per-user request claim as the first data write and original-response finalization before commit. `paymentRequest.service.ts` owns deterministic fingerprints, transaction-local claim timeout handling, request persistence, integrity checks and authorized replay; it does not orchestrate payment/audit mutations. Replay occurs after a claim-conflict transaction has rolled back and creates no new audit. The backend requires an Idempotency-Key. Frontend `paymentRecovery.ts` persists immutable per-user attempts before fetch, coordinates actions with Web Locks, and clears only validated confirmation or explicit reconciliation. The page subscribes to storage/focus/local recovery notifications and never submits on restoration. Browser acceptance remains pending. See DOCS/PAYMENT_IDEMPOTENCY.md and PROJECT_STATE.md for current verification.
 
 Future hardening should prefer transactional mutation + audit where required.
 

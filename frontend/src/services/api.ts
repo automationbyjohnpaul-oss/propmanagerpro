@@ -1,4 +1,11 @@
-import { getToken, removeToken } from "@/lib/auth";
+import { getToken, removeToken } from "../lib/auth";
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number, public readonly code?: string, public readonly retryAfter?: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -90,13 +97,13 @@ async function request<T>(
   const response = await fetch(url, config);
 
   if (response.status === 401) {
-    removeToken();
-
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
+    // An old account's delayed failure must not sign out a newly active account.
+    if (new Headers(config.headers).get("Authorization") === `Bearer ${getToken()}`) {
+      removeToken();
+      if (typeof window !== "undefined") window.location.href = "/login";
     }
 
-    throw new Error("Session expired. Please login again.");
+    throw new ApiError("Session expired. Please login again.", 401);
   }
 
   if (response.status === 204) {
@@ -120,7 +127,10 @@ async function request<T>(
         ? (data as { message: string }).message
         : `Request failed with status ${response.status}`;
 
-    throw new Error(message);
+    const code = data && typeof data === "object" && "code" in data && typeof data.code === "string" ? data.code : undefined;
+    const retryHeader = response.headers.get("Retry-After");
+    const retryAfter = retryHeader !== null && /^\d+$/.test(retryHeader) ? Number(retryHeader) : undefined;
+    throw new ApiError(message, response.status, code, retryAfter);
   }
 
   return data as T;
@@ -134,12 +144,13 @@ export const api = {
   get: <T>(endpoint: string, signal?: AbortSignal) =>
     request<T>(endpoint, {}, signal),
 
-  post: <T>(endpoint: string, body: unknown, signal?: AbortSignal) =>
+  post: <T>(endpoint: string, body: unknown, signal?: AbortSignal, headers?: Record<string, string>) =>
     request<T>(
       endpoint,
       {
         method: "POST",
         body: JSON.stringify(body),
+        headers,
       },
       signal,
     ),

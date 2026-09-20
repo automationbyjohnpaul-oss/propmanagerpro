@@ -49,6 +49,14 @@ Known API domains:
 
 ---
 
+# Payment Creation
+
+Payment creation update (D-039, verified locally September 19, 2026): `POST /api/payments` requires a UUID `Idempotency-Key` header. Reuse the key and original accepted details after an uncertain response. Matching authorized replays return the stored original 201/body, which can differ from the payment's current edited state, without another payment or audit. New keys permit distinct legitimate payments. Omitted dates remain omitted for fingerprinting and are resolved once on creation.
+
+Missing/invalid key returns 400; changed details return 409 `IDEMPOTENCY_PAYLOAD_MISMATCH`; claim lock timeout returns 503 `IDEMPOTENCY_CLAIM_TIMEOUT` with `Retry-After: 2`. Integrity failures return distinct 500 codes and must not cause submission under a new key. Full contract: [Payment idempotency](PAYMENT_IDEMPOTENCY.md).
+
+The frontend persists and sends the key with the original payload, validates successful confirmations and retains uncertain attempts for explicit retry/reconciliation. CORS exposes Retry-After so the browser can honor the retry countdown. Backend/client release must be coordinated. Real-browser acceptance and production behavior remain unverified.
+
 # Finance
 
 Known analytics endpoints include:

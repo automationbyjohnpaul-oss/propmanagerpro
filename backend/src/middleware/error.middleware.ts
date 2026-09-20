@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { logError } from "../lib/errorLogger";
 import { env } from "../config/env";
+import { PaymentRequestError } from "../lib/paymentRequestError";
 
 export function errorMiddleware(
   err: any,
@@ -13,7 +14,15 @@ export function errorMiddleware(
     method: req.method,
     path: req.originalUrl,
     userId: (req as any).userId,
+    ...(err instanceof PaymentRequestError ? { code: err.code, phase: err.phase } : {}),
   });
+
+  // These explicit messages/codes are safe in production and needed for recovery.
+  if (err instanceof PaymentRequestError) {
+    if (err.retryAfter !== undefined) res.setHeader("Retry-After", String(err.retryAfter));
+    res.status(err.statusCode).json({ message: err.message, code: err.code });
+    return;
+  }
 
   // Prisma duplicate constraint
   if (err?.code === "P2002") {

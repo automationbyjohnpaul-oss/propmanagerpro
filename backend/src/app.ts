@@ -44,6 +44,7 @@ app.use(
   cors({
     origin: corsOrigins,
     credentials: true,
+    exposedHeaders: ["Retry-After"],
   }),
 );
 

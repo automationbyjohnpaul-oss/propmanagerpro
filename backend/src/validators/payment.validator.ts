@@ -4,10 +4,8 @@ import { PaymentMethod, PaymentStatus } from "@prisma/client";
 // Create schema - prevent REFUNDED creation
 export const createPaymentSchema = z.object({
   amount: z.number().positive().max(999999),
-  paymentDate: z.coerce
-    .date()
-    .optional()
-    .default(() => new Date()),
+  // Preserve omission for request fingerprinting; the service resolves it after claim.
+  paymentDate: z.coerce.date().optional(),
   method: z.nativeEnum(PaymentMethod),
   status: z
     .nativeEnum(PaymentStatus)

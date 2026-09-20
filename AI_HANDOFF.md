@@ -283,13 +283,15 @@ PROJECT_STATE.md
 
 # Current Development Phase
 
-[H1 PAYMENT CREATION ATOMICITY VERIFIED LOCALLY / DIFF REVIEWED]
+[H1 ATOMICITY COMMITTED / BACKEND IDEMPOTENCY VERIFIED / FRONTEND PENDING]
+
+Latest checkpoint: atomicity committed at `28a2a6d`; D-039 backend and compatible frontend recovery implemented but uncommitted. Migration `20260919150000_add_payment_create_requests` was applied only to verified localhost:5432/propmanagerpro_test (15 applied migrations); Prisma Client 6.19.3 regenerated. Three red tests reproduced duplicate same-key creation, missing-key acceptance and changed-payload acceptance before implementation. Latest backend suite: 120/120 across 9 files (41 payment HTTP/database cases and 2 real-app CORS tests); backend source types pass. Prior integration-test types passed at the backend checkpoint. Concurrency tests observe real blocked transactions. Frontend persists user/key/payload before sending, coordinates actions with Web Locks, restores for review without submission/expiry, validates confirmation, and requires explicit reconciliation before replacing unresolved attempts. It passes 25 Node recovery tests using simulated browser primitives, targeted lint and a production build including types. Review DOCS/PAYMENT_IDEMPOTENCY.md and the combined diff, then perform real-browser acceptance (reload/restart, multiple tabs, account changes, lost responses, storage failures and mobile/keyboard UX) before the Git checkpoint/release. H1 remains incomplete; deployment timeout compatibility and payment-update atomicity are still open. No server retry loop, new dependencies, development/production migration, commit, push or deployment occurred.
 
 September 19 continuation: repository HEAD was `690eb0b`; an existing uncommitted extraction of `createPaymentRecord()` was preserved. The property-service test checkpoint showed persisted success assertions, not rollback coverage. D-025 assigns audit orchestration to the controller, so D-038 uses a controller-owned transaction with a shared client for payment service checks/write and audit creation.
 
 Five tests in `backend/tests/integration/payment.controller.test.ts` exercise real HTTP routes, validation, controller/services, error middleware, and local PostgreSQL. The harness supplies identity rather than testing JWT. Both rollback regressions failed before the fix with a committed payment and HTTP 500; all five passed afterward. Existing baseline was freshly confirmed as 77/77, then `npm test` passed 82/82 in 8 files; backend source `tsc --noEmit` passed. See PROJECT_STATE.md for current evidence boundaries.
 
-The user reviewed the service/controller diff and authorized the Git checkpoint. Next: verify current Git state, then design idempotency separately. No idempotency or payment-update atomicity guarantee was added. Duplicate-on-retry remains unproven; H2 stays paused. No migrations, production configuration, or deployment changes were made; no push is authorized.
+The user reviewed the service/controller diff and committed the atomicity checkpoint as `28a2a6d`. That historical checkpoint added no idempotency or payment-update atomicity guarantee and changed no migrations or deployment configuration. D-039's later local reproduction and backend fix are recorded above; this is not a reproduced production incident. H2 stays paused and no push is authorized.
 
 ### Historical September 7 verification
 

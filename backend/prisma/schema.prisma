@@ -74,6 +74,7 @@ model User {
   properties Property[]
   tenants    Tenant[]
   auditLogs  AuditLog[]
+  paymentCreateRequests PaymentCreateRequest[]
 
   @@map("users")
 }
@@ -238,7 +239,29 @@ model Payment {
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  creationRequest PaymentCreateRequest?
+
   @@map("payments")
+}
+
+// Payment creation idempotency (D-039): retained alongside payment history.
+// Completion fields are nullable while the transaction claims the request key.
+// The workflow must populate them before commit; null on replay is an integrity error.
+model PaymentCreateRequest {
+  userId             String
+  requestKey         String   @db.Uuid
+  fingerprintVersion Int
+  requestFingerprint String   @db.VarChar(64)
+  paymentId          String?  @unique
+  responseStatus     Int?
+  responseBody       Json?
+  createdAt          DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@id([userId, requestKey], map: "payment_create_requests_pkey")
+  @@map("payment_create_requests")
 }
 
 // ============================================

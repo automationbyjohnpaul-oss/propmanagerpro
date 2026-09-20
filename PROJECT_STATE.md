@@ -2,13 +2,23 @@
 
 **Last Updated:** September 19, 2026
 
-**State:** H1 payment creation + audit atomicity verified locally; reviewed for Git checkpoint
+**State:** H1 creation idempotency and frontend recovery implemented locally; uncommitted; real-browser acceptance and release review pending
 
-**Current Development Mode:** H1 financial integrity, small evidence-led changes; idempotency design remains pending
+**Current Development Mode:** Review combined diff and verify real-browser recovery before the Git checkpoint and coordinated release
+
+September 19 frontend recovery checkpoint: the creation page now persists a per-user UUID and immutable payload before sending, restores unresolved attempts for review without submission/expiry, and supports same-key retry or explicit reconciliation. Browser Web Locks serialize payment actions per user across same-origin tabs; missing lock/storage support stops submission. Confirmed responses are validated before clearing evidence. Resolution markers prevent stale tabs from resubmitting completed attempts. Account switching and 401 preserve unresolved attempts; a delayed non-GET 401 cannot clear a newer account's session. CORS exposes Retry-After for browser countdowns.
+
+Fresh verification: frontend `npm run test:payments` passes 25/25 Node tests using simulated storage, fetch and lock coordination; targeted ESLint and frontend production build (including TypeScript) pass. Backend `npm test` passes 120/120 in 9 files (41 payment HTTP/database cases plus 2 real-app CORS checks); backend source TypeScript passes. This is NOT real-browser reload/restart/multi-tab or full JWT end-to-end evidence. Those acceptance checks, deployment timeout compatibility and payment-update atomicity remain open. No dependencies added.
+
+September 19 backend idempotency checkpoint: verified 14 existing migrations and exactly one pending migration, then applied `20260919150000_add_payment_create_requests` ONLY to `localhost:5432/propmanagerpro_test` (PostgreSQL 18.6); 15 migrations now applied there. Regenerated Prisma Client 6.19.3. Same-key retry duplication was reproduced locally before the fix: two requests returned different payment IDs. Three new request-contract tests failed before implementation, then passed. Full backend suite now passes 118/118 in 8 files, including 41 payment HTTP/database tests. Backend source and the integration test both passed TypeScript checks. Actual blocking was observed for concurrent commit, rollback and timeout cases. The test harness supplies identity and does not establish JWT/production correctness.
+
+Backend POST payment creation now requires a UUID Idempotency-Key. It claims the per-user key as the first data write, restores the previous lock timeout, performs service validation/payment/audit, and stores the original response in one controller-owned transaction. Replay checks record integrity and current access before comparing the fingerprint. Date omission survives validation. See D-039 and DOCS/PAYMENT_IDEMPOTENCY.md for error codes and evidence boundaries.
+
+Release boundary: frontend and backend now implement compatible request keys locally and must be released together. Real-browser acceptance and deployment timeout compatibility remain unverified; H1 is NOT complete. No development/production migration, deployment, push or new commit was performed. Payment-update atomicity remains separate. The existing Vite warning persists.
 
 Fresh local verification (September 19, 2026): the existing unit suite passed 77/77 before changes. New HTTP/database regression tests reproduced the payment creation atomicity gap: an audit insert failure returned HTTP 500 with a payment still committed. The creation controller now uses one Prisma interactive transaction for service checks, payment creation, and audit creation. HTTP 201 follows commit. Both rollback regressions then passed; `npm test` passed 82/82 tests in 8 files against the guarded `localhost/propmanagerpro_test` database, and `tsc --noEmit` passed for backend source. The HTTP harness supplies authenticated identity; JWT verification is not covered by these new tests. No schema/migrations, production configuration, or audit-service implementation changed. The pre-existing uncommitted payment-record helper was preserved.
 
-Evidence boundary: this establishes payment **creation** atomicity only. Direct service callers still own audit orchestration. Payment updates still perform mutation and audit separately. Idempotency is not implemented; duplicate-on-retry remains an unproven risk, and no payment uniqueness rule was added. Production and deployment remain unverified; no fresh full build was run. The existing Vite module-format warning remains.
+Evidence boundary for the D-038 checkpoint above: that change established payment **creation** atomicity only. Current D-039 verification is recorded separately at the top. Direct payment-service callers still own their audit/idempotency orchestration. Payment updates still perform mutation and audit separately. No lease/amount/reference payment uniqueness rule was added. Production and deployment remain unverified; the fresh frontend build is recorded above.
 
 Fresh local verification (September 7, 2026): the cross-user unit reassignment defect was reproduced at the service layer, then fixed. Both reassignment regression tests passed; `npm run test:unit` passed 77/77 tests in 7 files against `localhost:5432/propmanagerpro_test`. The existing 14 migrations were applied to that dedicated database; no schema or migration files changed. The development database was not targeted. No fresh backend build, HTTP reproduction, or production verification was performed. The Vite module-format warning persists and remains separate tooling maintenance.
 
@@ -585,7 +595,7 @@ Production migration state       -> [PENDING] WAITING
 
 The next AI/session must NOT jump directly into unrelated feature development.
 
-Continue from: H1 payment creation + audit atomicity (D-038), verified locally with 82/82 backend tests and a passing backend source TypeScript check. The user reviewed the service/controller diff and authorized the Git checkpoint. Verify current Git state, then design idempotency separately before implementation. Payment-update atomicity remains open; H2 stays paused. No push, deployment, or lease refactor is authorized by this checkpoint.
+Continue from: D-038 atomicity committed at `28a2a6d`; D-039 backend and compatible frontend recovery implemented, uncommitted. Latest checks: 120 backend tests, 25 simulated frontend recovery tests, backend types, targeted frontend lint and frontend production build pass. The migration is applied only on local propmanagerpro_test. Review the combined diff and perform real-browser recovery acceptance against DOCS/PAYMENT_IDEMPOTENCY.md before checkpoint/release. Deployment timeout compatibility and payment-update atomicity remain open; H2 stays paused. No push, deployment, or lease refactor is authorized by this checkpoint.
 
 Inspect the current implementation first.
 

@@ -9,6 +9,15 @@ import {
 import { createAuditLog } from "../services/audit.service";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { prisma } from "../lib/prisma";
+import {
+  claimPaymentRequest,
+  completePaymentRequest,
+  fingerprintPaymentRequest,
+  parsePaymentRequestKey,
+  PaymentRequestAlreadyClaimed,
+  PAYMENT_TRANSACTION_TIMEOUT_MS,
+  replayPaymentRequest,
+} from "../services/paymentRequest.service";
 
 // ============================================
 // HELPERS
@@ -53,30 +62,39 @@ export const getPayment = asyncHandler(async (req: Request, res: Response) => {
 export const createPaymentHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getUserId(req);
+    const requestKey = parsePaymentRequestKey(req.get("Idempotency-Key"));
+    const fingerprint = fingerprintPaymentRequest(req.body);
     // Payment and its audit must commit or roll back together.
-    const payment = await prisma.$transaction(async (tx) => {
-      const createdPayment = await createPayment(userId, req.body, tx);
+    let responseBody;
+    try {
+      responseBody = await prisma.$transaction(async (tx) => {
+        await claimPaymentRequest(tx, userId, requestKey, fingerprint);
+        const createdPayment = await createPayment(userId, req.body, tx);
 
-      await createAuditLog(
-        userId,
-        "CREATE_PAYMENT",
-        "Payment",
-        createdPayment.id,
-        {
-          amount: Number(createdPayment.amount),
-          method: createdPayment.method,
-          status: createdPayment.status,
-          leaseId: createdPayment.leaseId,
-          tenantId: createdPayment.tenantId,
-          paymentDate: createdPayment.paymentDate,
-        },
-        tx,
-      );
+        await createAuditLog(
+          userId,
+          "CREATE_PAYMENT",
+          "Payment",
+          createdPayment.id,
+          {
+            amount: Number(createdPayment.amount),
+            method: createdPayment.method,
+            status: createdPayment.status,
+            leaseId: createdPayment.leaseId,
+            tenantId: createdPayment.tenantId,
+            paymentDate: createdPayment.paymentDate,
+          },
+          tx,
+        );
 
-      return createdPayment;
-    });
+        return completePaymentRequest(tx, userId, requestKey, createdPayment.id, createdPayment);
+      }, { timeout: PAYMENT_TRANSACTION_TIMEOUT_MS });
+    } catch (error) {
+      if (!(error instanceof PaymentRequestAlreadyClaimed)) throw error;
+      responseBody = await replayPaymentRequest(userId, requestKey, fingerprint);
+    }
 
-    return res.status(201).json(payment);
+    return res.status(201).json(responseBody);
   },
 );
 

@@ -833,6 +833,30 @@ it does not by itself mark D-031 or D-032 as implemented.
 
 ---
 
+## D-039 — Payment Creation Request Identity and Persistent Recovery
+
+**Date:** September 19, 2026
+
+**Status:** Backend and frontend recovery implemented locally; uncommitted. Migration applied only to local test DB. Automated checks pass; real-browser acceptance and coordinated release pending.
+
+**Decision:** Identify payment creation by authenticated user plus client UUID request key. Claim that key as the first data write in the same transaction as payment, audit, and original response storage. Retain successful server records and unresolved browser attempts without silent expiry.
+
+**Reason:** D-038 prevents an undocumented committed creation, but does not prevent a retry after a lost response from creating another payment. Request identity must not prohibit distinct legitimate payments with identical business fields. User approved persistent browser/server recovery without automatic submission or silent expiry.
+
+**Contract:** Versioned deterministic fingerprints preserve date omission until service resolution after claim. Same-key matching requests replay the original authorized 201/body; changed details return 409. Claim lock timeout returns 503 with a distinct code/Retry-After. Incomplete records and unsupported versions fail closed with distinct integrity errors, never replacement creation. Replay checks current access without rerunning creation eligibility.
+
+**Mechanism:** Parameterized raw SQL for timeout settings and claim insertion only; remaining writes use Prisma. Capture/restore the effective lock timeout around the claim. No server retry loop. Local six-case contention experiment on Prisma 6.19.3/PostgreSQL 18.6 established structured raw-query SQLSTATE handling; it did not verify payment idempotency.
+
+**Implementation boundary:** Additive PaymentCreateRequest model/table, per-user/key primary key, nullable unique payment link, restrictive foreign keys. Nullable completion fields require workflow finalization checks; schema alone does not enforce complete-at-commit. No backfill, broad payment uniqueness, new active-lease rule, or status-update workflow.
+
+**Verification:** Three red HTTP tests reproduced same-key duplicate creation and absent key/mismatch enforcement before the backend fix. Full suite passes 118/118 in 8 files; the 41 payment HTTP/database tests exercise the contract matrix, including real blocked commit/rollback/timeout cases. Source and integration-test TypeScript checks pass. Migration applied only to localhost:5432/propmanagerpro_test after verifying its existing 14 migrations and sole pending addition; Prisma regenerated. No production verification or frontend recovery tests. Initial 2-second claim/10-second transaction settings passed local cases; deployment timeout review remains pending.
+
+**Frontend checkpoint:** User-scoped immutable attempts persist before fetch without expiry or automatic restoration submission. Same-origin per-user Web Locks prevent concurrent preparation/retry/reconciliation; missing coordination/storage fails closed. A valid successful response or explicit confirmed reconciliation writes a resolution marker before removing details. Integrity/mismatch/validation errors preserve evidence for review. CORS exposes Retry-After. Frontend passes 25 Node recovery tests with simulated storage/fetch/locks, targeted lint and a production build including types. Full backend suite now passes 120/120 in 9 files with 2 real-app CORS checks; source types pass. Real-browser acceptance and deployment timeout review remain pending.
+
+**Specification:** `DOCS/PAYMENT_IDEMPOTENCY.md`. Runtime helpers handle request identity/persistence/replay only; the controller still owns payment/audit transaction orchestration. Frontend and backend now implement compatible mandatory keys locally and must be released together. D-038's 82-test and the backend-only 118-test results remain historical.
+
+---
+
 Template for New Decisions
 ## D-XXX — [Title]
 

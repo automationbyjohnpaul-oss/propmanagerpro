@@ -10,6 +10,28 @@ For current status, use `PROJECT_STATE.md`.
 
 # 2026
 
+## Frontend Payment Recovery (September 19, 2026; uncommitted)
+
+* Persist per-user UUID/original payload before sending; restore for review with no auto-submit or expiry. Same-key retry preserves details; explicit reconciliation is required before replacing an unresolved attempt.
+* Coordinate same-origin tabs using Web Locks; stop submission when coordination/storage is unavailable. Validate confirmations, preserve evidence on uncertain responses, and retain minimal resolution markers against stale resubmission.
+* Preserve attempts across logout/account changes; a delayed non-GET 401 no longer signs out a newer account. Expose Retry-After through backend CORS.
+* Verified 25 frontend Node recovery tests with simulated browser primitives, targeted lint, frontend production build and backend source types. Full backend suite: 120/120 across 9 files, including 2 real-app CORS checks.
+* Real-browser acceptance and deployment remain unverified. No added dependencies, development/production migration, commit or push.
+
+## Backend Payment Creation Idempotency (September 19, 2026; uncommitted)
+
+* Applied the reviewed additive migration only to verified localhost:5432/propmanagerpro_test (15 total migrations); regenerated Prisma Client 6.19.3.
+* Reproduced duplicate same-key payment creation with failing HTTP regressions, then implemented mandatory UUID keys, deterministic v1 fingerprints, transactional claims, original-response storage, and authorized replay.
+* Preserved omitted dates through validation; restored effective lock timeout after the first-write claim. Added explicit safe recovery/integrity error codes without changing unrelated error handling.
+* Full suite: 118/118 in 8 files, including 41 payment HTTP/database cases. Real blocking verifies concurrent commit/rollback/timeout; source and integration-test type checks pass.
+* Existing frontend remains keyless and requires the separate persistent-recovery implementation before release. No frontend, development/production DB, deployment, push or commit changes in this checkpoint. Payment-update atomicity remains open.
+
+## Idempotency Schema Proposal (September 19, 2026; not applied)
+
+* Recorded D-039 and the payment request identity/replay/recovery contract, including a 21-case planned backend regression matrix.
+* Prepared PaymentCreateRequest and an additive migration from an offline Prisma datamodel comparison. Schema validation passed; existing payment data needs no backfill.
+* No migration application, client generation, runtime behavior changes, or new passing idempotency tests in this checkpoint. D-038's 82/82 suite result remains historical for this step.
+
 ## Payment Creation Audit Atomicity (September 19, 2026)
 
 * Reproduced HTTP 500 with a committed payment when the audit insert fails in the local test database.

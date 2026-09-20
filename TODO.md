@@ -10,7 +10,13 @@ Current implementation status belongs in `PROJECT_STATE.md`.
 
 - [x] Payment creation + audit atomicity: locally verified; see PROJECT_STATE.md and D-038.
 - [x] Review H1 atomicity diff with the user; include the verified change in its Git checkpoint before the next implementation phase.
-- [ ] Design logical payment request identity, retry/concurrency handling, and response replay before implementing idempotency. Preserve distinct legitimate payments; do not infer uniqueness from lease/amount or reference. Duplicate-on-retry remains an unproven risk.
+- [x] Agree request identity, fingerprint, replay and persistent recovery design (D-039); prepare additive schema/migration. See DOCS/PAYMENT_IDEMPOTENCY.md.
+- [x] Review/apply migration only to verified localhost/propmanagerpro_test; 15 migrations there, Prisma regenerated. Development/production untouched.
+- [x] Implement backend idempotency and exercise I01-I21 contract areas; 118/118 full-suite tests, 41 payment HTTP/database tests, source/test type checks pass.
+- [ ] Review/checkpoint the combined idempotency diff; release mandatory-key API with its compatible frontend.
+- [x] Implement persistent recovery and compatible key-required API flow; 25 Node recovery tests, targeted lint and frontend production build pass. Backend now 120/120 with real-app CORS checks.
+- [ ] Perform real-browser acceptance: reload/restart, same-origin multiple tabs, lost response, account changes, storage failure, retry countdown and explicit reconciliation. Simulated storage/lock tests are not browser evidence.
+- [ ] Verify deployment timeout compatibility before release. Distinct legitimate payments remain allowed. Duplicate same-key creation was reproduced locally before the fix, not in production.
 - [ ] Address payment-update mutation/audit atomicity in a separately scoped step; the creation fix does not cover updates.
 
 H2 database isolation investigation remains paused while H1 is active.
