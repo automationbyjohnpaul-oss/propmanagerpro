@@ -13,9 +13,9 @@ Current implementation status belongs in `PROJECT_STATE.md`.
 - [x] Agree request identity, fingerprint, replay and persistent recovery design (D-039); prepare additive schema/migration. See DOCS/PAYMENT_IDEMPOTENCY.md.
 - [x] Review/apply migration only to verified localhost/propmanagerpro_test; 15 migrations there, Prisma regenerated. Development/production untouched.
 - [x] Implement backend idempotency and exercise I01-I21 contract areas; 118/118 full-suite tests, 41 payment HTTP/database tests, source/test type checks pass.
-- [ ] Review/checkpoint the combined idempotency diff; release mandatory-key API with its compatible frontend.
+- [x] Review/checkpoint the combined idempotency diff; release mandatory-key API with its compatible frontend.
 - [x] Implement persistent recovery and compatible key-required API flow; 25 Node recovery tests, targeted lint and frontend production build pass. Backend now 120/120 with real-app CORS checks.
-- [ ] Perform real-browser acceptance: reload/restart, same-origin multiple tabs, lost response, account changes, storage failure, retry countdown and explicit reconciliation. Simulated storage/lock tests are not browser evidence.
+- [x] Perform real-browser acceptance: reload/restart, same-origin multiple tabs, lost response, account changes, storage failure, retry countdown and explicit reconciliation. Local browser verification completed; production verification remains separate.
 - [ ] Verify deployment timeout compatibility before release. Distinct legitimate payments remain allowed. Duplicate same-key creation was reproduced locally before the fix, not in production.
 - [ ] Address payment-update mutation/audit atomicity in a separately scoped step; the creation fix does not cover updates.
 
