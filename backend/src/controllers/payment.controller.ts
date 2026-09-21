@@ -67,31 +67,44 @@ export const createPaymentHandler = asyncHandler(
     // Payment and its audit must commit or roll back together.
     let responseBody;
     try {
-      responseBody = await prisma.$transaction(async (tx) => {
-        await claimPaymentRequest(tx, userId, requestKey, fingerprint);
-        const createdPayment = await createPayment(userId, req.body, tx);
+      responseBody = await prisma.$transaction(
+        async (tx) => {
+          await claimPaymentRequest(tx, userId, requestKey, fingerprint);
+          const createdPayment = await createPayment(userId, req.body, tx);
 
-        await createAuditLog(
-          userId,
-          "CREATE_PAYMENT",
-          "Payment",
-          createdPayment.id,
-          {
-            amount: Number(createdPayment.amount),
-            method: createdPayment.method,
-            status: createdPayment.status,
-            leaseId: createdPayment.leaseId,
-            tenantId: createdPayment.tenantId,
-            paymentDate: createdPayment.paymentDate,
-          },
-          tx,
-        );
+          await createAuditLog(
+            userId,
+            "CREATE_PAYMENT",
+            "Payment",
+            createdPayment.id,
+            {
+              amount: Number(createdPayment.amount),
+              method: createdPayment.method,
+              status: createdPayment.status,
+              leaseId: createdPayment.leaseId,
+              tenantId: createdPayment.tenantId,
+              paymentDate: createdPayment.paymentDate,
+            },
+            tx,
+          );
 
-        return completePaymentRequest(tx, userId, requestKey, createdPayment.id, createdPayment);
-      }, { timeout: PAYMENT_TRANSACTION_TIMEOUT_MS });
+          return completePaymentRequest(
+            tx,
+            userId,
+            requestKey,
+            createdPayment.id,
+            createdPayment,
+          );
+        },
+        { timeout: PAYMENT_TRANSACTION_TIMEOUT_MS },
+      );
     } catch (error) {
       if (!(error instanceof PaymentRequestAlreadyClaimed)) throw error;
-      responseBody = await replayPaymentRequest(userId, requestKey, fingerprint);
+      responseBody = await replayPaymentRequest(
+        userId,
+        requestKey,
+        fingerprint,
+      );
     }
 
     return res.status(201).json(responseBody);
@@ -106,7 +119,8 @@ export const updatePaymentHandler = asyncHandler(
     const userId = getUserId(req);
     const paymentId = req.params.id as string;
 
-    // Get existing payment for audit
+    // Get existing payment for audit.
+    // NOTE: captured OUTSIDE the transaction so it reflects pre-update state.
     const existingPayment = await getPaymentById(paymentId, userId);
 
     if (!existingPayment) {
@@ -125,24 +139,43 @@ export const updatePaymentHandler = asyncHandler(
       notes: existingPayment.notes,
     };
 
-    // Service will enforce all business rules
-    const payment = await updatePayment(paymentId, userId, req.body);
+    // Payment mutation and audit insertion must commit or roll back together.
+    const payment = await prisma.$transaction(
+      async (tx) => {
+        // Service enforces all business rules using the transaction client.
+        const updatedPayment = await updatePayment(
+          paymentId,
+          userId,
+          req.body,
+          tx,
+        );
 
-    // Only log if update was successful
-    await createAuditLog(userId, "UPDATE_PAYMENT", "Payment", payment.id, {
-      updatedFields: Object.keys(req.body),
-      previousData: previousState,
-      newData: {
-        amount: Number(payment.amount),
-        method: payment.method,
-        status: payment.status,
-        leaseId: payment.leaseId,
-        tenantId: payment.tenantId,
-        paymentDate: payment.paymentDate,
-        reference: payment.reference,
-        notes: payment.notes,
+        await createAuditLog(
+          userId,
+          "UPDATE_PAYMENT",
+          "Payment",
+          updatedPayment.id,
+          {
+            updatedFields: Object.keys(req.body),
+            previousData: previousState,
+            newData: {
+              amount: Number(updatedPayment.amount),
+              method: updatedPayment.method,
+              status: updatedPayment.status,
+              leaseId: updatedPayment.leaseId,
+              tenantId: updatedPayment.tenantId,
+              paymentDate: updatedPayment.paymentDate,
+              reference: updatedPayment.reference,
+              notes: updatedPayment.notes,
+            },
+          },
+          tx,
+        );
+
+        return updatedPayment;
       },
-    });
+      { timeout: PAYMENT_TRANSACTION_TIMEOUT_MS },
+    );
 
     return res.status(200).json(payment);
   },

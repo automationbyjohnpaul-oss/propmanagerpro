@@ -123,9 +123,10 @@ export async function updatePayment(
   id: string,
   userId: string,
   data: UpdatePaymentData,
+  client: Prisma.TransactionClient = prisma,
 ) {
   // 1. Verify ownership
-  const existingPayment = await prisma.payment.findFirst({
+  const existingPayment = await client.payment.findFirst({
     where: {
       id,
       lease: {
@@ -195,7 +196,7 @@ export async function updatePayment(
   }
 
   // 4. UPDATE PAYMENT
-  return prisma.payment.update({
+  return client.payment.update({
     where: { id },
     data: updateData,
     include: {
