@@ -26,10 +26,12 @@ export default function EditPaymentPage() {
     async function loadPayment() {
       try {
         const data = await getPayment(paymentId);
+
         if (!data) {
           setError("Payment not found");
           return;
         }
+
         setPayment(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load payment");
@@ -37,28 +39,38 @@ export default function EditPaymentPage() {
         setLoading(false);
       }
     }
+
     loadPayment();
   }, [paymentId]);
 
   async function handleSubmit(data: CreatePaymentInput) {
     await updatePayment(paymentId, {
-      ...data,
+      amount: data.amount,
+      method: data.method,
       paymentDate: data.paymentDate
         ? new Date(data.paymentDate).toISOString()
         : undefined,
+      reference: data.reference || undefined,
+      notes: data.notes || undefined,
     });
+
     router.push("/payments");
     router.refresh();
   }
 
-  if (loading) return <LoadingState message="Loading payment..." />;
-  if (error || !payment)
+  if (loading) {
+    return <LoadingState message="Loading payment..." />;
+  }
+
+  if (error || !payment) {
     return <ErrorState message={error || "Payment not found"} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-2xl mx-auto">
         <PageHeader title="Edit Payment" description="Update payment details" />
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <PaymentForm
             initialData={{
