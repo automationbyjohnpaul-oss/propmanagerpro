@@ -857,6 +857,36 @@ it does not by itself mark D-031 or D-032 as implemented.
 
 ---
 
+## D-040 — Node 24 Runtime Policy
+
+**Date:** September 21, 2026
+
+**Status:** Accepted and implemented locally; production verification pending
+
+**Decision:** PropManager Pro uses Node 24 as its intended runtime family.
+
+**Implementation:** `.nvmrc` pins the developer runtime to `24.18.0`; `backend/package.json` and `frontend/package.json` declare `"node": "24.x"`.
+
+**Reason:** The project previously had no explicit runtime contract, so a deployment platform could select a runtime different from the locally verified environment.
+
+**Important:** Railway runtime selection remains unverified until deployment logs confirm the resolved Node version.
+
+---
+
+## D-041 — Strict Update Payload Separation
+
+**Date:** September 21, 2026
+
+**Status:** Accepted and applied to payment and lease editing
+
+**Decision:** Frontend update flows must send only fields accepted by the corresponding backend update schema. Edit pages must not spread create-shaped form state into strict update requests.
+
+**Reason:** Create and update operations have different business rules. Create forms may contain relationship or initial-state fields that are immutable or controlled through dedicated lifecycle endpoints during updates.
+
+**Implementation:** Payment editing sends only `amount`, `paymentDate`, `method`, `reference`, and `notes`. Lease editing constructs an explicit update payload and omits the create-only `status` field; lease status changes remain controlled by lifecycle endpoints. Property, tenant, and unit edit flows were reviewed and currently send fields accepted by their update validators.
+
+---
+
 Template for New Decisions
 ## D-XXX — [Title]
 

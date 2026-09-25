@@ -6,6 +6,28 @@ This document contains future work and intentionally limited follow-up work.
 
 Current implementation status belongs in `PROJECT_STATE.md`.
 
+## Current Development Priority
+
+### Update Validation Review
+
+- [x] Fix payment edit payload to omit unsupported create-only/immutable fields.
+- [x] Make payment update and audit creation atomic.
+- [x] Review the lease edit page against `updateLeaseSchema`.
+- [x] Replace lease create-payload spreading with an explicit update payload and omit `status`.
+- [x] Compare property, tenant, and unit edit payloads with their update validators; no unsupported fields were found.
+- [ ] Complete the remaining route-by-route local application verification.
+- [ ] Prepare the Railway deployment checklist without deploying.
+
+Required pattern:
+
+```ts
+await updateEntity(id, {
+  mutableField: data.mutableField,
+});
+```
+
+Avoid spreading complete create-form state into strict update requests.
+
 ## H1 - Financial Integrity (September 19, 2026)
 
 - [x] Payment creation + audit atomicity: locally verified; see PROJECT_STATE.md and D-038.
@@ -17,7 +39,7 @@ Current implementation status belongs in `PROJECT_STATE.md`.
 - [x] Implement persistent recovery and compatible key-required API flow; 25 Node recovery tests, targeted lint and frontend production build pass. Backend now 120/120 with real-app CORS checks.
 - [x] Perform real-browser acceptance: reload/restart, same-origin multiple tabs, lost response, account changes, storage failure, retry countdown and explicit reconciliation. Local browser verification completed; production verification remains separate.
 - [ ] Verify deployment timeout compatibility before release. Distinct legitimate payments remain allowed. Duplicate same-key creation was reproduced locally before the fix, not in production.
-- [ ] Address payment-update mutation/audit atomicity in a separately scoped step; the creation fix does not cover updates.
+- [x] Address payment-update mutation/audit atomicity; update and audit now share one Prisma transaction and the integration suite passes.
 
 H2 database isolation investigation remains paused while H1 is active.
 
@@ -127,7 +149,7 @@ npm run build
 - [ ] Review the complete local and production build/deployment configuration for deterministic behavior.
 - [ ] Confirm production deployment uses explicit Prisma generation.
 - [ ] Confirm production migration execution occurs at the intended deployment stage.
-- [ ] Review Node.js/runtime version consistency between local and production.
+- [ ] Confirm Railway resolves the declared Node 24.x runtime from deployment logs. Local policy is Node 24.18.0 via `.nvmrc`.
 - [ ] Re-verify Railway deployment only when production infrastructure is available.
 - [ ] Avoid introducing implicit lifecycle hooks for production-critical behavior.
 

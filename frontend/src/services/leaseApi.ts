@@ -44,6 +44,18 @@ export interface CreateLeaseInput {
   tenantId: string;
 }
 
+export type UpdateLeaseInput = Pick<
+  CreateLeaseInput,
+  | "startDate"
+  | "endDate"
+  | "monthlyRent"
+  | "securityDeposit"
+  | "signedAt"
+  | "propertyId"
+  | "unitId"
+  | "tenantId"
+>;
+
 // ============================================
 // GET LEASES
 // ============================================
@@ -76,7 +88,7 @@ export async function createLease(
 
 export async function updateLease(
   id: string,
-  data: CreateLeaseInput,
+  data: UpdateLeaseInput,
 ): Promise<Lease> {
   return api.put(`/api/leases/${id}`, data);
 }

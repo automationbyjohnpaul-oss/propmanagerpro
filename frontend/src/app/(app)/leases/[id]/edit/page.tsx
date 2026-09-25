@@ -7,6 +7,7 @@ import {
   updateLease,
   Lease,
   CreateLeaseInput,
+  UpdateLeaseInput,
 } from "@/services/leaseApi";
 import PageHeader from "@/components/PageHeader";
 import LeaseForm from "@/components/forms/LeaseForm";
@@ -41,11 +42,18 @@ export default function EditLeasePage() {
   }, [leaseId]);
 
   async function handleSubmit(data: CreateLeaseInput) {
-    await updateLease(leaseId, {
-      ...data,
+    const updateData: UpdateLeaseInput = {
       startDate: new Date(data.startDate).toISOString(),
       endDate: new Date(data.endDate).toISOString(),
-    });
+      monthlyRent: data.monthlyRent,
+      securityDeposit: data.securityDeposit,
+      signedAt: data.signedAt,
+      propertyId: data.propertyId,
+      unitId: data.unitId,
+      tenantId: data.tenantId,
+    };
+
+    await updateLease(leaseId, updateData);
     router.push("/leases");
     router.refresh();
   }

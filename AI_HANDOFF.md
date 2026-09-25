@@ -8,6 +8,30 @@ A new AI session should use this document to understand the project's operating 
 
 `PROJECT_STATE.md` remains the authoritative operational state document.
 
+## Latest Development Context — September 21, 2026
+
+Recent repository work includes the payment update validation fix and the Node 24 runtime policy. The supplied checkpoint was on `main`, two commits ahead of `origin/main`, with a clean working tree.
+
+Completed and verified locally:
+
+- Payment edit sends only update-compatible fields.
+- Payment update and audit creation are atomic.
+- Payment integration tests pass (41 tests).
+- Backend build and production startup pass.
+- Frontend production build passes.
+- `.nvmrc` specifies Node 24.18.0 and both packages declare Node 24.x.
+- Lease edit now constructs an explicit update payload and omits create-only `status`.
+- Property, tenant, and unit edit payloads were reviewed against their update validators; no issues were identified during the review.
+
+Railway deployment is intentionally deferred. Do not treat production infrastructure or Railway's selected runtime as verified until deployment is recreated and confirmed from logs.
+
+Next work:
+
+1. Complete route-by-route local application verification.
+2. Review security and production environment configuration.
+3. Prepare the Railway deployment checklist.
+4. Subscribe and deploy only after local readiness is complete.
+
 ---
 
 # Project
@@ -285,7 +309,7 @@ PROJECT_STATE.md
 
 [H1 ATOMICITY COMMITTED / BACKEND IDEMPOTENCY VERIFIED / FRONTEND PENDING]
 
-Latest checkpoint: atomicity committed at `28a2a6d`; D-039 backend and compatible frontend recovery implemented but uncommitted. Migration `20260919150000_add_payment_create_requests` was applied only to verified localhost:5432/propmanagerpro_test (15 applied migrations); Prisma Client 6.19.3 regenerated. Three red tests reproduced duplicate same-key creation, missing-key acceptance and changed-payload acceptance before implementation. Latest backend suite: 120/120 across 9 files (41 payment HTTP/database cases and 2 real-app CORS tests); backend source types pass. Prior integration-test types passed at the backend checkpoint. Concurrency tests observe real blocked transactions. Frontend persists user/key/payload before sending, coordinates actions with Web Locks, restores for review without submission/expiry, validates confirmation, and requires explicit reconciliation before replacing unresolved attempts. It passes 25 Node recovery tests using simulated browser primitives, targeted lint and a production build including types. Review DOCS/PAYMENT_IDEMPOTENCY.md and the combined diff, then perform real-browser acceptance (reload/restart, multiple tabs, account changes, lost responses, storage failures and mobile/keyboard UX) before the Git checkpoint/release. H1 remains incomplete; deployment timeout compatibility and payment-update atomicity are still open. No server retry loop, new dependencies, development/production migration, commit, push or deployment occurred.
+Historical September 19 checkpoint: atomicity committed at `28a2a6d`; D-039 backend and compatible frontend recovery implemented but uncommitted. Migration `20260919150000_add_payment_create_requests` was applied only to verified localhost:5432/propmanagerpro_test (15 applied migrations); Prisma Client 6.19.3 regenerated. Three red tests reproduced duplicate same-key creation, missing-key acceptance and changed-payload acceptance before implementation. The backend suite passed 120/120 across 9 files (41 payment HTTP/database cases and 2 real-app CORS tests); backend source types passed. Concurrency tests observed real blocked transactions. Frontend payment recovery passed 25 Node tests using simulated browser primitives, targeted lint and a production build including types. Payment-update atomicity was still open at this historical checkpoint and was completed on September 21. Deployment timeout compatibility remains open. No production deployment occurred.
 
 September 19 continuation: repository HEAD was `690eb0b`; an existing uncommitted extraction of `createPaymentRecord()` was preserved. The property-service test checkpoint showed persisted success assertions, not rollback coverage. D-025 assigns audit orchestration to the controller, so D-038 uses a controller-owned transaction with a shared client for payment service checks/write and audit creation.
 
@@ -420,6 +444,93 @@ When continuing this project:
 18. Report verification evidence.
 19. Update documentation after significant changes.
 20. Never treat historical information as current without verification.
+21. For frontend/backend validation failures, capture the actual network payload and compare it with the backend Zod schema.
+22. Confirm whether the operation is create or update before changing the contract.
+23. Do not weaken backend validation unless the business rule requires it.
+24. Prefer correcting frontend payloads when rejected fields are immutable or create-only.
+
+---
+
+# AI Debug Context
+
+When investigating any issue, follow the failure path before modifying code.
+
+### 1. User Action
+
+Document:
+
+- What was the user trying to do?
+- What steps produced the issue?
+- What was the expected behaviour?
+
+### 2. Frontend Behaviour
+
+Inspect:
+
+- Page/component involved
+- Form state
+- Submitted payload
+- Browser console/network evidence
+
+### 3. API Contract
+
+Verify:
+
+- Route being called
+- HTTP method
+- Request schema
+- Allowed fields
+- Response expectations
+
+### 4. Backend Validation
+
+Check:
+
+- Zod schemas
+- Input transformation
+- Validation failures
+- Error handling
+
+### 5. Business Logic
+
+Inspect:
+
+- Service functions
+- Permissions
+- Domain rules
+- Transaction boundaries
+
+### 6. Database Behaviour
+
+Verify:
+
+- Prisma queries
+- Relations
+- Constraints
+- Transaction behaviour
+- Migration state
+
+### 7. Evidence Review
+
+Collect:
+
+- Application logs
+- Database state
+- Tests
+- Previous decisions
+- Related incidents
+
+### 8. Regression Protection
+
+Before closing an issue:
+
+- Add or update tests where appropriate.
+- Record reusable lessons.
+- Update relevant documentation.
+
+Rule:
+
+Do not modify code until the failure layer has been identified.
 
 ---
 

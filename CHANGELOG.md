@@ -10,6 +10,54 @@ For current status, use `PROJECT_STATE.md`.
 
 # 2026
 
+## September 21, 2026
+
+### Fixed
+
+- Fixed payment edit failures caused by create-only fields being sent to strict update validation.
+- Updated payment edit submission to send only fields accepted by the payment update schema.
+- Updated lease edit submission to send update-compatible payloads and prevent create-only fields from being submitted during updates.
+
+### Changed
+
+- Added an explicit Node.js runtime policy:
+  - `.nvmrc` defines the local development runtime as Node 24.18.0.
+  - Backend and frontend packages declare Node 24.x compatibility.
+  - Production runtime selection remains pending deployment verification.
+
+- Added AI debugging investigation guidance to `AI_HANDOFF.md` to standardize issue investigation steps before code changes.
+
+### Verification
+
+- Payment integration tests passed.
+- Backend TypeScript build passed.
+- Backend startup verified against the local database.
+- Frontend production build passed.
+- Production deployment verification remains pending.
+
+## September 2026 Stability and Update-Payload Hardening
+
+### Fixed
+
+- Fixed payment edit validation failure caused by sending create-payment fields to the update endpoint.
+- Restricted payment edit requests to update-compatible fields.
+- Made payment updates and `UPDATE_PAYMENT` audit records commit or roll back together.
+- Fixed lease editing so the create-only `status` field is not sent to the strict lease update endpoint.
+- Added an explicit lease update input type and explicit edit-page payload construction.
+
+### Added
+
+- Added `.nvmrc` with Node 24.18.0.
+- Declared Node 24.x in backend and frontend package engines.
+
+### Verified
+
+- Backend build and production startup succeeded locally.
+- Frontend production build succeeded locally.
+- Payment atomicity integration tests passed (41 tests).
+- Property, tenant, and unit edit payloads were audited against their backend update validators; no unsupported fields were found.
+- Railway runtime selection remains unverified because deployment has not started.
+
 ## Frontend Payment Recovery (September 19, 2026; uncommitted)
 
 * Persist per-user UUID/original payload before sending; restore for review with no auto-submit or expiry. Same-key retry preserves details; explicit reconciliation is required before replacing an unresolved attempt.
