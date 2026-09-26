@@ -8,6 +8,26 @@ For current status, use `PROJECT_STATE.md`.
 
 ---
 
+## Unreleased
+
+### Added
+
+- Lease activation action for PENDING leases.
+- End Lease confirmation workflow for ACTIVE leases.
+- Reusable LeaseRowActions and ConfirmActionModal components; existing activation and end-lease behavior was preserved during extraction.
+
+### Fixed
+
+- Standardized active-lease conflict responses across create, update, activate, and restore operations as HTTP 409 with "Unit already has an active lease".
+- Explicit ConflictError middleware handling preserves user-safe business conflict responses in development and production configuration while unexpected production errors remain masked.
+
+### Verified
+
+- Conflict response behavior through isolated middleware/source checks with mocked inputs, including shared tenant/unit conflict messages, PaymentRequestError preservation, raw Prisma P2002/P2025 handling, and unexpected production error masking.
+- These checks do not establish live HTTP, browser, full integration, deployed production, real archive/payment failure, or real concurrent activation behavior.
+
+---
+
 # 2026
 
 ## September 21, 2026

@@ -104,6 +104,16 @@ Production errors should not expose:
 
 ---
 
+## Business and Unexpected Error Responses
+
+Explicitly typed ConflictError responses preserve HTTP 409 and user-safe business messages in all environments. This includes lease occupancy conflicts and the existing tenant/unit archive conflicts. PaymentRequestError retains its existing status, message, code, and optional Retry-After header behavior.
+
+Unexpected errors remain masked in production. An ordinary unexpected Error returns HTTP 500 with {"message":"Internal Server Error"} and no stack trace, original internal message, or database details in the response body. Arbitrary error messages are not exposed merely because the ConflictError branch exists.
+
+This behavior was verified through isolated middleware/source checks with mocked inputs under development and production configuration. It does not establish deployed production behavior, live endpoint behavior, or logging/redaction behavior; logging was stubbed in the isolated checks.
+
+---
+
 # Security Verification
 
 Security changes are not complete until they are tested against:

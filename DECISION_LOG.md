@@ -887,6 +887,29 @@ it does not by itself mark D-031 or D-032 as implemented.
 
 ---
 
+## Engineering Lesson — Lease Conflict Error Propagation
+
+**Date:** September 26, 2026
+
+**Classification:** Engineering lesson, not a new product decision.
+
+**Finding:** Business rules can be correct while user-facing behavior fails if typed errors are not handled by middleware. Lease conflicts were detected correctly, but plain Error classification and production middleware masking caused inconsistent responses.
+
+**Resolution:** Standardized the four lease conflict checks through the existing ConflictError and shared message. Added explicit middleware handling and verified response behavior through isolated checks with mocked inputs.
+
+**Lesson:** Verify the full error path:
+
+```text
+Service error
+  -> Middleware classification
+  -> HTTP response
+  -> Frontend handling
+```
+
+Middleware verification does not replace endpoint, browser, or production testing. No occupancy or lifecycle business rule changed.
+
+---
+
 Template for New Decisions
 ## D-XXX — [Title]
 

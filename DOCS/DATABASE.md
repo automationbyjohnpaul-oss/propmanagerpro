@@ -102,6 +102,26 @@ Any older documentation referencing `EXPIRED` or `isActive` is stale until verif
 
 ---
 
+# Active Lease Uniqueness
+
+One ACTIVE lease per unit is enforced by the partial unique index:
+
+```sql
+CREATE UNIQUE INDEX "leases_one_active_per_unit_idx"
+ON "leases" ("unitId")
+WHERE "status" = 'ACTIVE';
+```
+
+It is defined by migration 20260901120000_add_active_lease_per_unit_unique_index. The ordinary Prisma indexes on status and [unitId, status] do not themselves enforce uniqueness; the SQL migration supplies this protection.
+
+Multiple historical, PENDING, and TERMINATED leases may reference the same unit. Multiple ACTIVE leases on the same unit are blocked, including competing writes subject to this index.
+
+Local database migration state verified: localhost:5432/propmanagerpro had 15 applied migrations and a unique, valid, ready active-lease index. Production database state was not verified. A real concurrent activation test remains pending.
+
+Lease activity is determined by status, not dates. Future date-overlap policy remains a product decision; this index does not prevent overlapping PENDING date ranges.
+
+---
+
 # Financial Rules
 
 Payments should preserve auditable history.

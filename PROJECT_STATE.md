@@ -1,10 +1,39 @@
 # PropManager Pro -- Project State
 
-**Last Updated:** September 21, 2026
+**Last Updated:** September 26, 2026
 
 **State:** Local production builds and payment hardening verified; lease edit payload corrected; Railway deployment intentionally deferred
 
 **Current Development Mode:** Complete application-level local verification, then prepare the Railway deployment checklist
+
+## Lease Lifecycle and Conflict Handling — September 26, 2026
+
+Backend lifecycle functions exist for these transitions:
+
+```text
+PENDING
+  -> activate -> ACTIVE
+                   -> end -> ENDED
+                   -> terminate -> TERMINATED
+                                      -> restore -> ACTIVE
+```
+
+The frontend exposes Activate for PENDING leases and End Lease with confirmation for ACTIVE leases through LeaseRowActions and ConfirmActionModal. Terminate and Restore remain backend-supported transitions; the leases table does not expose those actions.
+
+One ACTIVE lease per unit is enforced by the database partial unique index leases_one_active_per_unit_idx. createLease(), updateLease(), activateLease(), and restoreLease() use ConflictError with ACTIVE_LEASE_CONFLICT_MESSAGE for active-lease conflicts. Prisma P2002 translation uses the same error. Middleware preserves HTTP 409 and "Unit already has an active lease" in development and production configuration.
+
+**Local database migration state verified.** The inspected localhost:5432/propmanagerpro database had 15 migrations applied and the active-lease index was unique, valid, and ready. This is not production database verification.
+
+Response verification used isolated service/middleware checks with mocked inputs and source inspection. It was not live HTTP testing, real archive workflow execution, real payment failure execution, or deployed production verification.
+
+Remaining boundaries:
+
+- Real concurrent activation test pending.
+- Browser/live HTTP verification of this lease work pending.
+- Production deployment verification pending.
+- Permanent automated regression tests for these isolated checks pending.
+
+---
 
 ## September 2026 Stability Checkpoint
 

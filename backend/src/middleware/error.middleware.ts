@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { logError } from "../lib/errorLogger";
 import { env } from "../config/env";
 import { PaymentRequestError } from "../lib/paymentRequestError";
+import { ConflictError } from "../lib/errors";
 
 export function errorMiddleware(
   err: any,
@@ -21,6 +22,11 @@ export function errorMiddleware(
   if (err instanceof PaymentRequestError) {
     if (err.retryAfter !== undefined) res.setHeader("Retry-After", String(err.retryAfter));
     res.status(err.statusCode).json({ message: err.message, code: err.code });
+    return;
+  }
+
+  if (err instanceof ConflictError) {
+    res.status(err.statusCode).json({ message: err.message });
     return;
   }
 

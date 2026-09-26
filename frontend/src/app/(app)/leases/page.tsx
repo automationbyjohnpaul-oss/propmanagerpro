@@ -7,11 +7,13 @@ import PageHeader from "@/components/PageHeader";
 import LoadingState from "@/components/LoadingState";
 import ErrorState from "@/components/ErrorState";
 import EmptyState from "@/components/EmptyState";
+import LeaseRowActions from "@/components/LeaseRowActions";
 
 export default function LeasesPage() {
   const [leases, setLeases] = useState<Lease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -34,6 +36,11 @@ export default function LeasesPage() {
       isMounted = false;
     };
   }, []);
+
+  async function reloadLeases() {
+    const data = await getLeases();
+    setLeases(data);
+  }
 
   // Soft loading: only show full loading state if still loading
   if (loading && !leases.length) {
@@ -63,6 +70,15 @@ export default function LeasesPage() {
             Add Lease
           </Link>
         </div>
+
+        {actionError && (
+          <p
+            role="alert"
+            className="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-800"
+          >
+            {actionError}
+          </p>
+        )}
 
         {leases.length === 0 ? (
           <EmptyState message="No leases found. Add your first lease to get started." />
@@ -141,13 +157,12 @@ export default function LeasesPage() {
                           {lease.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-right">
-                        <Link
-                          href={`/leases/${lease.id}/edit`}
-                          className="text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          Edit
-                        </Link>
+                      <td className="px-6 py-4 text-sm">
+                        <LeaseRowActions
+                          lease={lease}
+                          onReload={reloadLeases}
+                          onError={setActionError}
+                        />
                       </td>
                     </tr>
                   ))}

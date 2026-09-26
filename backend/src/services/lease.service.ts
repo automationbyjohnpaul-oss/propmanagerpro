@@ -172,7 +172,7 @@ export async function createLease(userId: string, data: CreateLeaseData) {
       });
 
       if (conflictingLease) {
-        throw new Error("Unit already has an active lease");
+        throw new ConflictError(ACTIVE_LEASE_CONFLICT_MESSAGE);
       }
     }
 
@@ -325,7 +325,7 @@ export async function updateLease(
       });
 
       if (conflictingLease) {
-        throw new Error("Unit already has an active lease");
+        throw new ConflictError(ACTIVE_LEASE_CONFLICT_MESSAGE);
       }
     }
 
@@ -400,7 +400,7 @@ export async function activateLease(id: string, userId: string) {
   });
 
   if (conflicting) {
-    throw new Error("Unit already has an active lease");
+    throw new ConflictError(ACTIVE_LEASE_CONFLICT_MESSAGE);
   }
 
   return translateActiveLeaseConflict(() =>
@@ -494,7 +494,7 @@ export async function restoreLease(id: string, userId: string) {
   });
 
   if (conflicting) {
-    throw new Error("Unit already has an active lease");
+    throw new ConflictError(ACTIVE_LEASE_CONFLICT_MESSAGE);
   }
 
   return translateActiveLeaseConflict(() =>

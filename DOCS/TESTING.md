@@ -1,3 +1,41 @@
+## Lease Conflict Middleware Verification
+
+September 26, 2026. Verified through isolated middleware/source checks with mocked inputs:
+
+- ✓ ConflictError status preservation.
+- ✓ ConflictError message preservation.
+- ✓ Tenant ConflictError middleware response: 409, "Cannot archive tenant with active lease. End lease first."
+- ✓ Unit ConflictError middleware response: 409, "Cannot archive unit with active lease".
+- ✓ PaymentRequestError status/message/code/header preservation.
+- ✓ Raw Prisma P2002/P2025 handling: 409 "Duplicate entry detected" and 404 "Record not found".
+- ✓ Unexpected production error masking: 500, {"message":"Internal Server Error"}.
+
+The source checks confirm that createLease(), updateLease(), activateLease(), and restoreLease() use ConflictError with ACTIVE_LEASE_CONFLICT_MESSAGE. Isolated service checks with mocked database responses exercised normal conflicts and simulated Prisma P2002; middleware preserved 409 and "Unit already has an active lease" under development and production configuration.
+
+Method: read and transpile existing TypeScript in memory, inject configuration and mocked dependencies, invoke the actual functions, and capture response status/body/headers. Tenant/unit checks supplied their source-confirmed ConflictError messages directly to middleware; they did not execute archive services. The payment check supplied a synthetic PaymentRequestError("RETRY", "Retry payment", 409, "claim", 3), observing code RETRY and Retry-After: 3. This is not a production payment error-code claim or coverage of every payment failure variant.
+
+For production masking, new Error("PRIVATE DATABASE DETAILS") produced exactly {"message":"Internal Server Error"} with status 500. The body contained no stack or original internal/database message. Logging was stubbed; log redaction was not tested.
+
+These checks did NOT include:
+
+- Live HTTP endpoint tests.
+- Browser acceptance tests.
+- Deployed production testing.
+- Real archive workflows.
+- Real payment failures.
+- Real concurrent activation.
+
+Pending:
+
+- ☐ Real concurrent activation test.
+- ☐ Browser and live HTTP verification.
+- ☐ Permanent automated regression tests for these checks.
+- ☐ Deployment verification.
+
+The payment checkpoints below are separate historical evidence and do not establish lease integration coverage.
+
+---
+
 # Payment verification - September 19, 2026
 
 Latest checkpoint: full backend `npm test` passes 120/120 across 9 files, including 41 payment HTTP/database cases and 2 real-application CORS tests for Idempotency-Key preflight/Retry-After exposure. Backend source TypeScript passes. From frontend, `npm run test:payments` passes 25/25 Node tests, targeted lint of changed frontend files passes, and `npm run build` passes including TypeScript.

@@ -49,6 +49,29 @@ Known API domains:
 
 ---
 
+# Lease Lifecycle and Conflicts
+
+Backend lifecycle endpoints:
+
+```text
+PATCH /api/leases/:id/activate    PENDING -> ACTIVE
+PATCH /api/leases/:id/end         ACTIVE -> ENDED
+PATCH /api/leases/:id/terminate   ACTIVE -> TERMINATED
+PATCH /api/leases/:id/restore     TERMINATED -> ACTIVE
+```
+
+Active-lease conflicts return HTTP 409 with:
+
+```json
+{"message":"Unit already has an active lease"}
+```
+
+This applies to creating an ACTIVE lease, activating a lease, restoring a lease, and updates whose resulting lease status is ACTIVE when another ACTIVE lease exists on the unit. The update endpoint does not accept status changes; lifecycle endpoints control those transitions.
+
+The response is preserved in development and production configuration. Verification used isolated service/middleware checks with mocked inputs and source inspection, not live HTTP or deployed production testing.
+
+---
+
 # Payment Creation
 
 Payment creation update (D-039, verified locally September 19, 2026): `POST /api/payments` requires a UUID `Idempotency-Key` header. Reuse the key and original accepted details after an uncertain response. Matching authorized replays return the stored original 201/body, which can differ from the payment's current edited state, without another payment or audit. New keys permit distinct legitimate payments. Omitted dates remain omitted for fingerprinting and are resolved once on creation.
